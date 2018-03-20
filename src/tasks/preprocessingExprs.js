@@ -16,11 +16,11 @@ module.exports = {
       const source = m.sources[sourceKey]
       const expr = source.preprocessing_expr
 
-      if (typeof expr !== 'string') {
-        logger.warn('Preprocessing expression not a string or undefined', {sourceKey})
+      if (!Array.isArray(expr)) {
+        logger.warn('Preprocessing expression must be an Array', {sourceKey})
       } else {
         try {
-          objs[sourceKey] = jsonata(expr)
+          objs[sourceKey] = jsonata(expr.join(' '))
         } catch (err) {
           logger.info('Preprocessing expression error', {err, expr, sourceKey})
         }

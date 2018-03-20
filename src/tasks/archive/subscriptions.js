@@ -27,28 +27,29 @@ function handleMessage (msg) {
   }
 
   const msgSeq = msg.getSequence()
+  const subject = msg.getSubject()
 
   try {
-    logger.info('Message received', {msgSeq})
+    logger.info('Message received', {msgSeq, subject})
 
     if (m.subscriptionsTs !== m.versionTs) {
-      logger.info('Message deferred', {msgSeq})
+      logger.info('Message deferred', {msgSeq, subject})
       return
     }
 
     const data = JSON.parse(msg.getData())
 
-    logger.info('Archiving', {msgSeq})
+    logger.info('Archiving', {msgSeq, subject})
 
     archive({data, documentService, preprocessingExpr}).then(doc => {
-      logger.info('Archived', {msgSeq, _id: doc._id})
+      logger.info('Archived', {msgSeq, subject, _id: doc._id})
 
       return msg.ack()
     }).catch(err => {
-      logger.error('Archive error', {msgSeq, err})
+      logger.error('Archive error', {msgSeq, subject, data, err})
     })
   } catch (err) {
-    logger.error('Message error', {msgSeq, err})
+    logger.error('Message error', {msgSeq, subject, err})
   }
 }
 
