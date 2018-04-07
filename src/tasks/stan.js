@@ -42,7 +42,7 @@ module.exports = {
       m.stanConnected = false
     })
     res.on('error', err => {
-      logger.info('NATS Streaming error', err)
+      logger.error('NATS Streaming error', err)
     })
 
     m.private.stan = res

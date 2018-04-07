@@ -8,5 +8,8 @@
 
 // Named exports for convenience
 module.exports = {
-  archive: require('./archive')
+  archive: require('./archive'),
+  decodePseudoBinary: require('./decodePseudoBinary'),
+  influxWrite: require('./influxWrite'),
+  transform: require('./transform')
 }

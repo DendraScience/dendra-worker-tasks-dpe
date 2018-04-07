@@ -6,7 +6,7 @@ module.exports = {
   guard (m) {
     return !m.subscriptionsCloseError &&
       m.private.stan && m.stanConnected &&
-      (m.subscriptionsTs !== m.versionTs) &&
+      (m.versionTs > m.subscriptionsTs) &&
       m.private.subscriptions
   },
 

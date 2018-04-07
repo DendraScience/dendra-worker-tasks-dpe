@@ -5,6 +5,7 @@
  */
 
 const jsonata = require('jsonata');
+const { registerHelpers } = require('../lib/jsonata-utils');
 
 module.exports = {
   guard(m) {
@@ -20,7 +21,8 @@ module.exports = {
         logger.warn('Preprocessing expression must be an Array', { sourceKey });
       } else {
         try {
-          objs[sourceKey] = jsonata(expr.join(' '));
+          const obj = objs[sourceKey] = jsonata(expr.join(' '));
+          registerHelpers(obj);
         } catch (err) {
           logger.info('Preprocessing expression error', { err, expr, sourceKey });
         }

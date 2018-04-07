@@ -21,6 +21,11 @@ app.set('connections', {
 })
 
 app.set('clients', {
+  influx: {
+    database: 'dendra_ts',
+    host: 'localhost',
+    port: 8086
+  },
   stan: {
     client: 'test-dpe-{key}',
     cluster: 'test-cluster',

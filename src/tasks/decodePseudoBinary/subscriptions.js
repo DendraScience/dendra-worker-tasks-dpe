@@ -2,9 +2,14 @@
  * Subscribe to subjects after preprocessing expressions are ready. Add an event listener for messages.
  */
 
+const LRU = require('modern-lru')
+const moment = require('../../lib/moment-fn')
+const {Decoder} = require('@dendra-science/goes-pseudo-binary')
+const {MomentEditor} = require('@dendra-science/utils-moment')
+
 async function processItem (
   {data, dataObj, msgSeq},
-  {documentService, errorSubject, logger, preprocessingExpr, stan, subSubject}) {
+  {decoderCache, editorCache, errorSubject, logger, preprocessingExpr, pubSubject, stan, staticRules, subSubject}) {
   try {
     /*
       Throttle re-processing of messages from error subject.
@@ -20,7 +25,7 @@ async function processItem (
 
     const preRes = await new Promise((resolve, reject) => {
       preprocessingExpr.evaluate(dataObj, {
-        env: () => ({errorSubject, msgSeq, subSubject})
+        env: () => ({errorSubject, msgSeq, pubSubject, subSubject})
       }, (err, res) => err ? reject(err) : resolve(res))
     })
 
@@ -38,22 +43,109 @@ async function processItem (
       return
     }
 
-    const {document_id: paramDocId} = params
-    if (typeof paramDocId !== 'string') throw new Error('Invalid params.document_id')
+    if (!Array.isArray(params.tags)) throw new Error('Invalid params.tags')
+    const {tags: paramTags} = params
+
+    if (typeof params.time === 'undefined') throw new Error('Invalid params.time')
+    const paramTime = moment(params.time).utc()
+    if (!(paramTime && paramTime.isValid())) throw new Error('Invalid params.time format')
 
     /*
-      Create document in archive.
+      Lookup static rule for decoding.
      */
 
-    const doc = await documentService.create({
-      _id: paramDocId,
-      content: {
-        context: preRes.context,
-        payload: preRes.payload
-      }
+    const staticRule = staticRules.find(rule => {
+      return rule.definition && rule.definition.decode_format &&
+        rule.tags && rule.tags.every(tag => paramTags.includes(tag)) &&
+        paramTime.isBetween(rule.begins_at, rule.ends_before, null, '[)')
     })
 
-    logger.info('Archived', {msgSeq, subSubject, _id: doc._id})
+    if (!staticRule) throw new Error('No static rule found')
+
+    /*
+      Get cached decoder, or create/cache a new decoder.
+     */
+
+    const {definition} = staticRule
+    const {
+      decode_columns: decodeCols,
+      decode_slice: decodeSlice,
+      time_edit: timeEdit,
+      time_interval: timeInterval
+    } = definition
+
+    let decoder = decoderCache.get(staticRule)
+    if (!decoder) {
+      decoder = new Decoder(definition.decode_format)
+
+      decoderCache.set(staticRule, decoder)
+    }
+
+    /*
+      Slice and decode buffer.
+     */
+
+    const decodeSliceArgs = Array.isArray(decodeSlice) ? decodeSlice.map(arg => arg | 0) : [0]
+    const decodeRes = await decoder.decode(Buffer.from(payload).slice(...decodeSliceArgs))
+
+    if (!decodeRes) throw new Error('Decode result undefined')
+    if (decodeRes.error) throw new Error(`Decode error: ${decodeRes.error}`)
+    if (!decodeRes.rows) throw new Error('Decode rows undefined')
+
+    /*
+      Get cached Moment editor, or create/cache a new editor (optional).
+     */
+
+    let editor = editorCache.get(staticRule)
+    if (!editor && timeEdit) {
+      editor = new MomentEditor(timeEdit)
+      editorCache.set(staticRule, editor)
+    }
+
+    /*
+      Map/reduce rows to assign column names and time.
+     */
+
+    if (!Array.isArray(decodeCols)) throw new Error('Decode columns undefined')
+
+    let time = editor ? editor.edit(paramTime).valueOf() : 0
+
+    decodeRes.rows = decodeRes.rows.map(row => {
+      const newRow = row.reduce((obj, cur, i) => {
+        const col = decodeCols[i]
+
+        if (!col) throw new Error(`Decode column [${i}] undefined`)
+
+        obj[col] = cur
+        return obj
+      }, {time})
+
+      // Assume rows are always in descending order
+      time -= (timeInterval | 0) * 1000
+
+      return newRow
+    })
+
+    await new Promise(resolve => setImmediate(resolve))
+
+    logger.info('Decoded', {msgSeq, subSubject})
+
+    /*
+      Prepare outbound messages and publish.
+     */
+
+    for (let row of decodeRes.rows) {
+      const msgStr = JSON.stringify({
+        context: preRes.context,
+        payload: row
+      })
+
+      const guid = await new Promise((resolve, reject) => {
+        stan.publish(pubSubject, msgStr, (err, guid) => err ? reject(err) : resolve(guid))
+      })
+
+      logger.info('Published', {msgSeq, subSubject, pubSubject, guid})
+    }
   } catch (err) {
     if (errorSubject && (subSubject !== errorSubject)) {
       logger.error('Processing error', {msgSeq, subSubject, err, dataObj})
@@ -103,19 +195,20 @@ module.exports = {
     return !m.subscriptionsError &&
       m.private.stan && m.stanConnected &&
       (m.preprocessingExprsTs === m.versionTs) &&
+      (m.staticRulesTs === m.versionTs) &&
       (m.subscriptionsTs !== m.versionTs) &&
       !m.private.subscriptions
   },
 
   execute (m, {logger}) {
-    const {preprocessingExprs, stan} = m.private
-    const documentService = m.$app.get('connections').jsonArchive.app.service('/documents')
+    const {preprocessingExprs, staticRules, stan} = m.private
     const subs = []
 
     m.sourceKeys.forEach(sourceKey => {
       const source = m.sources[sourceKey]
       const {
         error_subject: errorSubject,
+        pub_to_subject: pubSubject,
         sub_options: subOptions,
         sub_to_subject: subSubject
       } = source
@@ -139,12 +232,15 @@ module.exports = {
         const sub = stan.subscribe(subSubject, opts)
 
         sub.on('message', handleMessage.bind({
-          documentService,
+          decoderCache: new LRU(20), // TODO: Make configurable
+          editorCache: new LRU(20), // TODO: Make configurable
           errorSubject,
           logger,
           m,
           preprocessingExpr,
+          pubSubject,
           stan,
+          staticRules,
           subSubject
         }))
 

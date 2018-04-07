@@ -4,7 +4,12 @@
  * Subscribe to subjects after preprocessing expressions are ready. Add an event listener for messages.
  */
 
-async function processItem({ data, dataObj, msgSeq }, { documentService, errorSubject, logger, preprocessingExpr, stan, subSubject }) {
+const jsonata = require('jsonata');
+const LRU = require('modern-lru');
+const moment = require('../../lib/moment-fn');
+const { registerHelpers } = require('../../lib/jsonata-utils');
+
+async function processItem({ data, dataObj, msgSeq }, { errorSubject, exprCache, logger, preprocessingExpr, pubSubject, stan, staticRules, subSubject }) {
   try {
     /*
       Throttle re-processing of messages from error subject.
@@ -20,7 +25,7 @@ async function processItem({ data, dataObj, msgSeq }, { documentService, errorSu
 
     const preRes = await new Promise((resolve, reject) => {
       preprocessingExpr.evaluate(dataObj, {
-        env: () => ({ errorSubject, msgSeq, subSubject })
+        env: () => ({ errorSubject, msgSeq, pubSubject, subSubject })
       }, (err, res) => err ? reject(err) : resolve(res));
     });
 
@@ -38,22 +43,73 @@ async function processItem({ data, dataObj, msgSeq }, { documentService, errorSu
       return;
     }
 
-    const { document_id: paramDocId } = params;
-    if (typeof paramDocId !== 'string') throw new Error('Invalid params.document_id');
+    if (!Array.isArray(params.tags)) throw new Error('Invalid params.tags');
+    const { tags: paramTags } = params;
+
+    if (typeof params.time === 'undefined') throw new Error('Invalid params.time');
+    const paramTime = moment(params.time).utc();
+    if (!(paramTime && paramTime.isValid())) throw new Error('Invalid params.time format');
 
     /*
-      Create document in archive.
+      Lookup static rules for transformation.
      */
 
-    const doc = await documentService.create({
-      _id: paramDocId,
-      content: {
-        context: preRes.context,
-        payload: preRes.payload
-      }
+    const matchedRules = staticRules.filter(rule => {
+      return rule.definition && rule.tags && rule.tags.every(tag => paramTags.includes(tag)) && paramTime.isBetween(rule.begins_at, rule.ends_before, null, '[)');
     });
 
-    logger.info('Archived', { msgSeq, subSubject, _id: doc._id });
+    logger.info(`Processing (${matchedRules.length}) static rule(s)`);
+
+    /*
+      Evaluate all transform expressions.
+     */
+
+    for (let staticRule of matchedRules) {
+      const { definition } = staticRule;
+
+      if (Array.isArray(definition.transform_expr)) {
+        /*
+          Get cached expression, or create/cache an expression (optional).
+         */
+
+        let expr = exprCache.get(staticRule);
+        if (!expr) {
+          expr = jsonata(definition.transform_expr.join(' '));
+          registerHelpers(expr);
+
+          exprCache.set(staticRule, expr);
+        }
+
+        /*
+          Evaluate transform expression.
+         */
+
+        preRes.payload = await new Promise((resolve, reject) => {
+          expr.evaluate(preRes.payload, {
+            time: () => paramTime.clone()
+          }, (err, res) => err ? reject(err) : resolve(res));
+        });
+      }
+    }
+
+    await new Promise(resolve => setImmediate(resolve));
+
+    logger.info('Transformed', { msgSeq, subSubject });
+
+    /*
+      Prepare outbound messages and publish.
+     */
+
+    const msgStr = JSON.stringify({
+      context: preRes.context,
+      payload: preRes.payload
+    });
+
+    const guid = await new Promise((resolve, reject) => {
+      stan.publish(pubSubject, msgStr, (err, guid) => err ? reject(err) : resolve(guid));
+    });
+
+    logger.info('Published', { msgSeq, subSubject, pubSubject, guid });
   } catch (err) {
     if (errorSubject && subSubject !== errorSubject) {
       logger.error('Processing error', { msgSeq, subSubject, err, dataObj });
@@ -100,18 +156,18 @@ function handleMessage(msg) {
 
 module.exports = {
   guard(m) {
-    return !m.subscriptionsError && m.private.stan && m.stanConnected && m.preprocessingExprsTs === m.versionTs && m.subscriptionsTs !== m.versionTs && !m.private.subscriptions;
+    return !m.subscriptionsError && m.private.stan && m.stanConnected && m.preprocessingExprsTs === m.versionTs && m.staticRulesTs === m.versionTs && m.subscriptionsTs !== m.versionTs && !m.private.subscriptions;
   },
 
   execute(m, { logger }) {
-    const { preprocessingExprs, stan } = m.private;
-    const documentService = m.$app.get('connections').jsonArchive.app.service('/documents');
+    const { preprocessingExprs, staticRules, stan } = m.private;
     const subs = [];
 
     m.sourceKeys.forEach(sourceKey => {
       const source = m.sources[sourceKey];
       const {
         error_subject: errorSubject,
+        pub_to_subject: pubSubject,
         sub_options: subOptions,
         sub_to_subject: subSubject
       } = source;
@@ -135,12 +191,14 @@ module.exports = {
         const sub = stan.subscribe(subSubject, opts);
 
         sub.on('message', handleMessage.bind({
-          documentService,
           errorSubject,
+          exprCache: new LRU(20), // TODO: Make configurable
           logger,
           m,
           preprocessingExpr,
+          pubSubject,
           stan,
+          staticRules,
           subSubject
         }));
 
