@@ -1,6 +1,6 @@
 # Dendra Worker DPE Tasks
 
-Dendra Worker tasks for archiving, mutating and loading data. These are the core tasks for the Dendra Data Processing Engine (DPE).
+Dendra Worker tasks for archiving, transforming and loading data. These are the core tasks for the Dendra Data Processing Engine (DPE).
 
 
 ## Instructions

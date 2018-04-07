@@ -1,5 +1,5 @@
 /**
- * Worker tasks for archiving, mutating and loading data.
+ * Worker tasks for archiving, transforming and loading data.
  *
  * @author J. Scott Smith
  * @license BSD-2-Clause-FreeBSD
