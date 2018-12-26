@@ -144,7 +144,7 @@ function handleMessage(msg) {
 
   try {
     const data = msg.getData();
-    const dataObj = JSON.parse(msg.getData());
+    const dataObj = JSON.parse(data);
 
     processItem({ data, dataObj, msgSeq }, this).then(() => msg.ack()).catch(err => {
       logger.error('Message processing error', { msgSeq, subSubject, err, dataObj });
@@ -168,6 +168,7 @@ module.exports = {
       const {
         error_subject: errorSubject,
         pub_to_subject: pubSubject,
+        queue_group: queueGroup,
         sub_options: subOptions,
         sub_to_subject: subSubject
       } = source;
@@ -185,10 +186,12 @@ module.exports = {
         opts.setDeliverAllAvailable();
         opts.setMaxInFlight(1);
 
-        if (typeof subOptions.ack_wait === 'number') opts.setAckWait(subOptions.ack_wait);
-        if (typeof subOptions.durable_name === 'string') opts.setDurableName(subOptions.durable_name);
+        if (subOptions) {
+          if (typeof subOptions.ack_wait === 'number') opts.setAckWait(subOptions.ack_wait);
+          if (typeof subOptions.durable_name === 'string') opts.setDurableName(subOptions.durable_name);
+        }
 
-        const sub = stan.subscribe(subSubject, opts);
+        const sub = typeof queueGroup === 'string' ? stan.subscribe(subSubject, queueGroup, opts) : stan.subscribe(subSubject, opts);
 
         sub.on('message', handleMessage.bind({
           errorSubject,

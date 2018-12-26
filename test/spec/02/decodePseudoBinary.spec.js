@@ -3,7 +3,7 @@
  */
 
 describe('decodePseudoBinary tasks', function () {
-  this.timeout(30000)
+  this.timeout(60000)
 
   const now = new Date()
   const model = {
@@ -16,8 +16,9 @@ describe('decodePseudoBinary tasks', function () {
       sources: [
         {
           description: 'Decode DCP messages imported from GOES',
-          error_subject: 'dpe.decodePseudoBinary.v1.err.goes',
+          error_subject: 'goes.decodePseudoBinary.err',
           preprocessing_expr: [
+            /* eslint-disable quotes */
             "($org := context.org_slug ~> $safeName;",
             "$addr := payload.header.address ~> $safeName;",
             "$tags := ['org' & '$' & $org, 'addr' & '$' & $addr];",
@@ -25,13 +26,14 @@ describe('decodePseudoBinary tasks', function () {
             "$skip := $addr = 'bec0035c' ? true : false;",
             "$params := {'skip': $skip, 'tags': $tags, 'time': $time};",
             "$ ~> |$|{'params': $params, 'payload': payload.body}|;)"
+            /* eslint-enable quotes */
           ],
-          pub_to_subject: 'dpe.decodePseudoBinary.v1.out',
+          pub_to_subject: 'goes.decodePseudoBinary.out',
           sub_options: {
             ack_wait: 10000,
-            // durable_name: 'goes'
+            durable_name: 'decodePseudoBinary'
           },
-          sub_to_subject: 'goes.import.v1.out'
+          sub_to_subject: 'goes.decodePseudoBinary.in'
         }
       ],
       static_rules: [
@@ -60,6 +62,10 @@ describe('decodePseudoBinary tasks', function () {
     }
   }
 
+  const dataFileName = {
+    goesOut: 'goes_import_out'
+  }
+
   Object.defineProperty(model, '$app', {
     enumerable: false,
     configurable: false,
@@ -81,6 +87,8 @@ describe('decodePseudoBinary tasks', function () {
 
   let tasks
   let machine
+  let messages
+  let sub
 
   after(function () {
     return Promise.all([
@@ -94,7 +102,7 @@ describe('decodePseudoBinary tasks', function () {
   })
 
   it('should import', function () {
-    tasks = require('../../dist').decodePseudoBinary
+    tasks = require('../../../dist').decodePseudoBinary
 
     expect(tasks).to.have.property('sources')
   })
@@ -114,25 +122,56 @@ describe('decodePseudoBinary tasks', function () {
     model.scratch = {}
 
     return machine.clear().start().then(success => {
+      /* eslint-disable-next-line no-unused-expressions */
       expect(success).to.be.true
 
       // Verify task state
       expect(model).to.have.property('preprocessingExprsReady', true)
       expect(model).to.have.property('sourcesReady', true)
       expect(model).to.have.property('stanCheckReady', false)
+      expect(model).to.have.property('stanCloseReady', false)
       expect(model).to.have.property('stanReady', true)
       expect(model).to.have.property('staticRulesReady', true)
-      expect(model).to.have.property('subscriptionsCloseReady', false)
       expect(model).to.have.property('subscriptionsReady', true)
       expect(model).to.have.property('versionTsReady', false)
 
       // Check for defaults
-      expect(model).to.have.nested.property('sources.goes_import_v1_out.some_default', 'default')
+      expect(model).to.have.nested.property('sources.goes_decodePseudoBinary_in.some_default', 'default')
     })
   })
 
-  it('should decode for 5 seconds', function () {
+  it('should process goes data', function () {
+    return helper.loadData(dataFileName.goesOut).then(data => {
+      const msgStr = JSON.stringify(data)
+
+      return new Promise((resolve, reject) => {
+        model.private.stan.publish('goes.decodePseudoBinary.in', msgStr, (err, guid) => err ? reject(err) : resolve(guid))
+      })
+    })
+  })
+
+  it('should subscribe to decoded messages', function () {
+    const opts = model.private.stan.subscriptionOptions()
+    opts.setDeliverAllAvailable()
+    opts.setDurableName('decodePseudoBinary')
+
+    sub = model.private.stan.subscribe('goes.decodePseudoBinary.out', opts)
+    messages = []
+    sub.on('message', msg => {
+      messages.push(JSON.parse(msg.getData()))
+    })
+  })
+
+  it('should wait for 5 seconds to collect messages', function () {
     return new Promise(resolve => setTimeout(resolve, 5000))
+  })
+
+  it('should have decoded messages', function () {
+    sub.removeAllListeners()
+
+    expect(messages).to.have.lengthOf(6)
+    expect(messages).to.have.nested.property('0.payload.time', 1545660000000)
+    expect(messages).to.have.nested.property('0.payload.col01', 358)
   })
 
   it('should reconfigure', function () {
@@ -149,19 +188,21 @@ describe('decodePseudoBinary tasks', function () {
           description: 'Decode DCP messages imported from GOES',
           error_subject: 'dpe.decodePseudoBinary.v1.err.goes',
           preprocessing_expr: [
+            /* eslint-disable quotes */
             "($org := context.org_slug ~> $safeName;",
             "$addr := payload.header.address ~> $safeName;",
             "$tags := ['org' & '$' & $org, 'addr' & '$' & $addr];",
             "$time := payload.header.timeDate;",
             "$params := {'tags': $tags, 'time': $time};",
             "$ ~> |$|{'params': $params, 'payload': payload.body}|;)"
+            /* eslint-enable quotes */
           ],
-          pub_to_subject: 'dpe.decodePseudoBinary.v1.out',
+          pub_to_subject: 'goes.decodePseudoBinary.out',
           sub_options: {
             ack_wait: 10000,
-            // durable_name: 'goes'
+            durable_name: 'decodePseudoBinary'
           },
-          sub_to_subject: 'goes.import.v1.out'
+          sub_to_subject: 'goes.decodePseudoBinary.in'
         }
       ],
       static_rules: [
@@ -190,30 +231,55 @@ describe('decodePseudoBinary tasks', function () {
     }
 
     return machine.clear().start().then(success => {
+      /* eslint-disable-next-line no-unused-expressions */
       expect(success).to.be.true
 
       // Verify task state
       expect(model).to.have.property('preprocessingExprsReady', true)
       expect(model).to.have.property('sourcesReady', true)
-      expect(model).to.have.property('stanCheckReady', false)
-      expect(model).to.have.property('stanReady', false)
+      expect(model).to.have.property('stanCheckReady', true)
+      expect(model).to.have.property('stanCloseReady', true)
+      expect(model).to.have.property('stanReady', true)
       expect(model).to.have.property('staticRulesReady', true)
-      expect(model).to.have.property('subscriptionsCloseReady', true)
       expect(model).to.have.property('subscriptionsReady', true)
       expect(model).to.have.property('versionTsReady', false)
 
       // Check for defaults
-      expect(model).to.have.nested.property('sources.goes_import_v1_out.some_default', 'default')
+      expect(model).to.have.nested.property('sources.goes_decodePseudoBinary_in.some_default', 'default')
     })
   })
 
-  it('should decode for 5 seconds', function () {
-    return new Promise(resolve => setTimeout(resolve, 5000)).then(() => {
-      delete model.versionTs
+  it('should process goes data', function () {
+    return helper.loadData(dataFileName.goesOut).then(data => {
+      const msgStr = JSON.stringify(data)
+
+      return new Promise((resolve, reject) => {
+        model.private.stan.publish('goes.decodePseudoBinary.in', msgStr, (err, guid) => err ? reject(err) : resolve(guid))
+      })
     })
   })
 
-  it('should spin down for 5 seconds', function () {
+  it('should subscribe to decoded messages', function () {
+    const opts = model.private.stan.subscriptionOptions()
+    opts.setDeliverAllAvailable()
+    opts.setDurableName('decodePseudoBinary')
+
+    sub = model.private.stan.subscribe('goes.decodePseudoBinary.out', opts)
+    messages = []
+    sub.on('message', msg => {
+      messages.push(JSON.parse(msg.getData()))
+    })
+  })
+
+  it('should wait for 5 seconds to collect messages', function () {
     return new Promise(resolve => setTimeout(resolve, 5000))
+  })
+
+  it('should have decoded messages', function () {
+    sub.removeAllListeners()
+
+    expect(messages).to.have.lengthOf(6)
+    expect(messages).to.have.nested.property('0.payload.time', 1545660000000)
+    expect(messages).to.have.nested.property('0.payload.c01', 358)
   })
 })

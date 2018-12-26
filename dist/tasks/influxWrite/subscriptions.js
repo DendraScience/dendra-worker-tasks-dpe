@@ -186,7 +186,7 @@ function handleMessage(msg) {
 
   try {
     const data = msg.getData();
-    const dataObj = JSON.parse(msg.getData());
+    const dataObj = JSON.parse(data);
 
     processItem({ data, dataObj, msgSeq }, this).then(() => msg.ack()).catch(err => {
       logger.error('Message processing error', { msgSeq, subSubject, err, dataObj });
@@ -221,9 +221,11 @@ module.exports = {
         opts.setManualAckMode(true);
         opts.setDeliverAllAvailable();
 
-        if (typeof subOptions.ack_wait === 'number') opts.setAckWait(subOptions.ack_wait);
-        if (typeof subOptions.durable_name === 'string') opts.setDurableName(subOptions.durable_name);
-        if (typeof subOptions.max_in_flight === 'number') opts.setMaxInFlight(subOptions.max_in_flight);
+        if (subOptions) {
+          if (typeof subOptions.ack_wait === 'number') opts.setAckWait(subOptions.ack_wait);
+          if (typeof subOptions.durable_name === 'string') opts.setDurableName(subOptions.durable_name);
+          if (typeof subOptions.max_in_flight === 'number') opts.setMaxInFlight(subOptions.max_in_flight);
+        }
 
         const sub = stan.subscribe(subSubject, opts);
 

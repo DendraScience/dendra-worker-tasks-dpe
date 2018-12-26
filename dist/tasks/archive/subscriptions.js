@@ -88,7 +88,7 @@ function handleMessage(msg) {
 
   try {
     const data = msg.getData();
-    const dataObj = JSON.parse(msg.getData());
+    const dataObj = JSON.parse(data);
 
     processItem({ data, dataObj, msgSeq }, this).then(() => msg.ack()).catch(err => {
       logger.error('Message processing error', { msgSeq, subSubject, err, dataObj });
@@ -105,13 +105,14 @@ module.exports = {
 
   execute(m, { logger }) {
     const { preprocessingExprs, stan } = m.private;
-    const documentService = m.$app.get('connections').jsonArchive.app.service('/documents');
+    const documentService = m.$app.get('connections').archiveStore.app.service('/documents');
     const subs = [];
 
     m.sourceKeys.forEach(sourceKey => {
       const source = m.sources[sourceKey];
       const {
         error_subject: errorSubject,
+        queue_group: queueGroup,
         sub_options: subOptions,
         sub_to_subject: subSubject
       } = source;
@@ -129,10 +130,12 @@ module.exports = {
         opts.setDeliverAllAvailable();
         opts.setMaxInFlight(1);
 
-        if (typeof subOptions.ack_wait === 'number') opts.setAckWait(subOptions.ack_wait);
-        if (typeof subOptions.durable_name === 'string') opts.setDurableName(subOptions.durable_name);
+        if (subOptions) {
+          if (typeof subOptions.ack_wait === 'number') opts.setAckWait(subOptions.ack_wait);
+          if (typeof subOptions.durable_name === 'string') opts.setDurableName(subOptions.durable_name);
+        }
 
-        const sub = stan.subscribe(subSubject, opts);
+        const sub = typeof queueGroup === 'string' ? stan.subscribe(subSubject, queueGroup, opts) : stan.subscribe(subSubject, opts);
 
         sub.on('message', handleMessage.bind({
           documentService,

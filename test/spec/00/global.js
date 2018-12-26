@@ -4,6 +4,19 @@ const restClient = require('feathers-rest/client')
 const request = require('request')
 const app = feathers()
 
+const fs = require('fs')
+const path = require('path')
+
+function loadJSON (filePath) {
+  return new Promise((resolve, reject) => {
+    fs.readFile(filePath, (err, data) => err ? reject(err) : resolve(data))
+  }).then(data => JSON.parse(data))
+}
+
+function loadData (fileName) {
+  return loadJSON(path.join(__dirname, '../../data', `${fileName}.json`))
+}
+
 const tm = require('@dendra-science/task-machine')
 tm.configure({
   // logger: console
@@ -11,12 +24,11 @@ tm.configure({
 
 app.logger = console
 
-const JSON_ARCHIVE_API_URL = 'http://localhost:3033'
-// const JSON_ARCHIVE_API_URL = 'http://localhost:8080/_services/archive/json/api/v1'
+const ARCHIVE_JSON_API_URL = 'http://localhost:3036'
 
 app.set('connections', {
-  jsonArchive: {
-    app: feathers().configure(restClient(JSON_ARCHIVE_API_URL).request(request))
+  archiveStore: {
+    app: feathers().configure(restClient(ARCHIVE_JSON_API_URL).request(request))
   }
 })
 
@@ -30,7 +42,6 @@ app.set('clients', {
     client: 'test-dpe-{key}',
     cluster: 'test-cluster',
     opts: {
-      maxPubAcksInflight: 3,
       uri: 'http://localhost:4222'
     }
   }
@@ -38,6 +49,10 @@ app.set('clients', {
 
 global.assert = chai.assert
 global.expect = chai.expect
+global.helper = {
+  loadData,
+  loadJSON
+}
 global.main = {
   app
 }

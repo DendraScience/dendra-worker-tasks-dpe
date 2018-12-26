@@ -1,0 +1,78 @@
+{
+  "context": {
+    "imported_at": "2018-12-24T15:13:00.811Z",
+    "org_slug": "ucnrs",
+    "station": "ucac_angelo",
+    "table": "TenMin"
+  },
+  "payload": {
+    "options": {
+      "database": "ucnrs__ucac_angelo",
+      "precision": "ms"
+    },
+    "points": [
+      {
+        "fields": {
+          "AT_C_Avg": 6.643,
+          "AT_C_Max": 6.782,
+          "AT_C_Min": 6.577,
+          "BP_mB_Avg": 969.4357,
+          "Batt_volt_Avg": 12.09,
+          "Batt_volt_Max": 12.1,
+          "Batt_volt_Min": 12.09,
+          "CS616_50_Avg": 28.7,
+          "CS616_V_Avg": 26.43,
+          "Day_of_Year": 358,
+          "Extra": 1545663600000,
+          "HourMin": 700,
+          "PAR_Avg": 0,
+          "PAR_Max": 0,
+          "PAR_Min": 0,
+          "PCPN_accumulated": 568.7086,
+          "PCPN_intrvl_Tot": 0.508,
+          "PTemp_Avg": 7.359,
+          "RGTemp_C_Avg": 6.855,
+          "RH_pct_Avg": 99.5,
+          "RH_pct_Max": 99.7,
+          "RH_pct_Min": 99.4,
+          "RS_kw_m2_Avg": 0,
+          "RS_kw_m2_Max": 0,
+          "RS_kw_m2_Min": 0,
+          "RS_kw_m2_Std": 0,
+          "Soil_T100_C_Avg": 8.29,
+          "Soil_T100_C_Max": 8.42,
+          "Soil_T100_C_Min": 8.15,
+          "Soil_T200_C_Avg": 8.56,
+          "Soil_T200_C_Max": 8.71,
+          "Soil_T200_C_Min": 8.42,
+          "Soil_T500_C_Avg": 9.43,
+          "Soil_T500_C_Max": 9.59,
+          "Soil_T500_C_Min": 9.28,
+          "Soil_T50_C_Avg": 7.788,
+          "Soil_T50_C_Max": 7.962,
+          "Soil_T50_C_Min": 7.616,
+          "TC_C_10_Avg": 6.893,
+          "TC_C_10_Max": 7.148,
+          "TC_C_10_Min": 6.68,
+          "TC_C_2_Avg": 6.929,
+          "TC_C_2_Max": 7.153,
+          "TC_C_2_Min": 6.749,
+          "VWC50_Avg": 0.33,
+          "VWC_V_Avg": 0.256,
+          "WS_ms_Max": 1.731,
+          "WS_ms_Min": 0.294,
+          "WS_ms_Std": 0.293,
+          "delta_T_C_Avg": -0.036,
+          "delta_T_C_Max": 0.243,
+          "delta_T_C_Min": -0.243,
+          "mean_vector_wind_dir": 14.18,
+          "mean_wind_vector_mag": 0.563,
+          "mean_wind_vel": 0.796,
+          "sd_wind_dir": 43.79
+        },
+        "measurement": "source_tenmin",
+        "time": 1545663600000
+      }
+    ]
+  }
+}

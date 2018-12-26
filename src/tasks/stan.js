@@ -10,7 +10,7 @@ module.exports = {
       !m.private.stan && !m.stanConnected
   },
 
-  execute (m, {logger}) {
+  execute (m, { logger }) {
     const cfg = m.$app.get('clients').stan
     const client = cfg.client.replace(/{([.\w]+)}/g, (_, k) => m[k])
     const stan = STAN.connect(cfg.cluster, client, cfg.opts || {})
@@ -35,7 +35,7 @@ module.exports = {
     })
   },
 
-  assign (m, res, {logger}) {
+  assign (m, res, { logger }) {
     res.on('close', () => {
       logger.info('NATS Streaming closed')
 
@@ -47,6 +47,7 @@ module.exports = {
 
     m.private.stan = res
     m.stanConnected = true
+    m.stanTs = m.versionTs
 
     logger.info('NATS Streaming connected')
   }

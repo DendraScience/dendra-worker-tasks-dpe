@@ -25,7 +25,7 @@ class PointsWriter {
   }
 
   static cached (key, ...opts) {
-    let {cache} = this
+    let { cache } = this
     if (!cache) cache = this.cache = new LRU(60) // TODO: Make configurable
 
     let writer = cache.get(key)
@@ -39,7 +39,7 @@ class PointsWriter {
   }
 
   push (pts, cb) {
-    const {callbacks, options, points, debouncedWrite} = this
+    const { callbacks, options, points, debouncedWrite } = this
 
     points.push(...pts)
     callbacks.push(cb)
@@ -56,7 +56,7 @@ class PointsWriter {
   }
 
   async write () {
-    const {callbacks, influx, options, points} = this
+    const { callbacks, influx, options, points } = this
     this.points = []
     this.callbacks = []
 
@@ -96,8 +96,8 @@ class PointsWriter {
 }
 
 async function processItem (
-  {data, dataObj, msgSeq},
-  {errorSubject, influx, logger, pubSubject, stan, subSubject, writerOptions}) {
+  { data, dataObj, msgSeq },
+  { errorSubject, influx, logger, pubSubject, stan, subSubject, writerOptions }) {
   try {
     /*
       Throttle re-processing of messages from error subject.
@@ -113,7 +113,7 @@ async function processItem (
 
     if (!dataObj.payload) throw new Error('Missing payload object')
 
-    const {options, points} = dataObj.payload
+    const { options, points } = dataObj.payload
 
     if (typeof options !== 'object') throw new Error('Invalid payload.options')
     if (!Array.isArray(points)) throw new Error('Invalid payload.points')
@@ -151,16 +151,16 @@ async function processItem (
       writer.push(points, err => err ? reject(err) : resolve())
     })
 
-    logger.info('Point(s) written', {msgSeq, subSubject})
+    logger.info('Point(s) written', { msgSeq, subSubject })
   } catch (err) {
     if (errorSubject && (subSubject !== errorSubject)) {
-      logger.error('Processing error', {msgSeq, subSubject, err, dataObj})
+      logger.error('Processing error', { msgSeq, subSubject, err, dataObj })
 
       const guid = await new Promise((resolve, reject) => {
         stan.publish(errorSubject, data, (err, guid) => err ? reject(err) : resolve(guid))
       })
 
-      logger.info('Published to error subject', {msgSeq, subSubject, errorSubject, guid})
+      logger.info('Published to error subject', { msgSeq, subSubject, errorSubject, guid })
     } else {
       throw err
     }
@@ -168,7 +168,7 @@ async function processItem (
 }
 
 function handleMessage (msg) {
-  const {logger, m, subSubject} = this
+  const { logger, m, subSubject } = this
 
   if (!msg) {
     logger.error('Message undefined')
@@ -177,22 +177,22 @@ function handleMessage (msg) {
 
   const msgSeq = msg.getSequence()
 
-  logger.info('Message received', {msgSeq, subSubject})
+  logger.info('Message received', { msgSeq, subSubject })
 
   if (m.subscriptionsTs !== m.versionTs) {
-    logger.info('Message deferred', {msgSeq, subSubject})
+    logger.info('Message deferred', { msgSeq, subSubject })
     return
   }
 
   try {
     const data = msg.getData()
-    const dataObj = JSON.parse(msg.getData())
+    const dataObj = JSON.parse(data)
 
-    processItem({data, dataObj, msgSeq}, this).then(() => msg.ack()).catch(err => {
-      logger.error('Message processing error', {msgSeq, subSubject, err, dataObj})
+    processItem({ data, dataObj, msgSeq }, this).then(() => msg.ack()).catch(err => {
+      logger.error('Message processing error', { msgSeq, subSubject, err, dataObj })
     })
   } catch (err) {
-    logger.error('Message error', {msgSeq, subSubject, err})
+    logger.error('Message error', { msgSeq, subSubject, err })
   }
 }
 
@@ -206,8 +206,8 @@ module.exports = {
       !m.private.subscriptions
   },
 
-  execute (m, {logger}) {
-    const {influx, stan} = m.private
+  execute (m, { logger }) {
+    const { influx, stan } = m.private
     const subs = []
 
     m.sourceKeys.forEach(sourceKey => {
@@ -226,9 +226,11 @@ module.exports = {
         opts.setManualAckMode(true)
         opts.setDeliverAllAvailable()
 
-        if (typeof subOptions.ack_wait === 'number') opts.setAckWait(subOptions.ack_wait)
-        if (typeof subOptions.durable_name === 'string') opts.setDurableName(subOptions.durable_name)
-        if (typeof subOptions.max_in_flight === 'number') opts.setMaxInFlight(subOptions.max_in_flight)
+        if (subOptions) {
+          if (typeof subOptions.ack_wait === 'number') opts.setAckWait(subOptions.ack_wait)
+          if (typeof subOptions.durable_name === 'string') opts.setDurableName(subOptions.durable_name)
+          if (typeof subOptions.max_in_flight === 'number') opts.setMaxInFlight(subOptions.max_in_flight)
+        }
 
         const sub = stan.subscribe(subSubject, opts)
 
@@ -245,14 +247,14 @@ module.exports = {
 
         subs.push(sub)
       } catch (err) {
-        logger.error('Subscription error', {err, sourceKey, subSubject})
+        logger.error('Subscription error', { err, sourceKey, subSubject })
       }
     })
 
     return subs
   },
 
-  assign (m, res, {logger}) {
+  assign (m, res, { logger }) {
     m.private.subscriptions = res
     m.subscriptionsTs = m.versionTs
 

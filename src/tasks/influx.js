@@ -10,22 +10,22 @@ module.exports = {
       !m.private.influx
   },
 
-  execute (m, {logger}) {
+  execute (m, { logger }) {
     const cfg = m.$app.get('clients').influx
     const influx = new Influx.InfluxDB(cfg)
 
     logger.info('Influx pinging hosts')
 
-    return influx.ping(5000).then(hosts => ({hosts, influx}))
+    return influx.ping(5000).then(hosts => ({ hosts, influx }))
   },
 
-  assign (m, res, {logger}) {
+  assign (m, res, { logger }) {
     res.hosts.forEach(host => {
-      const {url, online, rtt, version} = host
+      const { url, online, rtt, version } = host
       if (online) {
-        logger.info('Influx host is online', {url, rtt, version})
+        logger.info('Influx host is online', { url, rtt, version })
       } else {
-        logger.warn('Influx host is OFFLINE', {url, rtt, version})
+        logger.warn('Influx host is OFFLINE', { url, rtt, version })
       }
     })
 

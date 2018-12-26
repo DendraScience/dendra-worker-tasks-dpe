@@ -48,6 +48,7 @@ module.exports = {
 
     m.private.stan = res;
     m.stanConnected = true;
+    m.stanTs = m.versionTs;
 
     logger.info('NATS Streaming connected');
   }

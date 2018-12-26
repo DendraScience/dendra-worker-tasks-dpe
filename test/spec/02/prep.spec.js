@@ -3,7 +3,7 @@
  */
 
 describe('transform/prep tasks', function () {
-  this.timeout(30000)
+  this.timeout(60000)
 
   const now = new Date()
   const model = {
@@ -16,8 +16,9 @@ describe('transform/prep tasks', function () {
       sources: [
         {
           description: 'Prepare payload for writing to Influx',
-          error_subject: 'dpe.prep.v1.err.patch',
+          error_subject: 'prep.err',
           preprocessing_expr: [
+            /* eslint-disable quotes */
             "($org := context.org_slug ~> $safeName;",
             "$station := context.station ~> $safeName;",
             "$table := context.table ~> $safeName;",
@@ -29,13 +30,14 @@ describe('transform/prep tasks', function () {
             "$points := [{'fields': $fields, 'measurement': 'source_' & $table, 'time': $time}];",
             "$payload := {'options': $options, 'points': $points};",
             "$ ~> |$|{'params': $params, 'payload': $payload}|;)"
+            /* eslint-enable quotes */
           ],
-          pub_to_subject: 'dpe.prep.v1.out',
+          pub_to_subject: 'prep.out',
           sub_options: {
             ack_wait: 10000,
-            // durable_name: 'patch'
+            durable_name: 'prep'
           },
-          sub_to_subject: 'dpe.patch.v1.out'
+          sub_to_subject: 'prep.in'
         }
       ],
       static_rules: [
@@ -55,6 +57,11 @@ describe('transform/prep tasks', function () {
       created_at: now,
       updated_at: now
     }
+  }
+
+  const dataFileName = {
+    csiOut: 'csi_patch_out',
+    decodePseudoBinaryOut: 'decodePseudoBinary_patch_out'
   }
 
   Object.defineProperty(model, '$app', {
@@ -78,6 +85,8 @@ describe('transform/prep tasks', function () {
 
   let tasks
   let machine
+  let messages
+  let sub
 
   after(function () {
     return Promise.all([
@@ -91,7 +100,7 @@ describe('transform/prep tasks', function () {
   })
 
   it('should import', function () {
-    tasks = require('../../dist').transform
+    tasks = require('../../../dist').transform
 
     expect(tasks).to.have.property('sources')
   })
@@ -111,30 +120,85 @@ describe('transform/prep tasks', function () {
     model.scratch = {}
 
     return machine.clear().start().then(success => {
+      /* eslint-disable-next-line no-unused-expressions */
       expect(success).to.be.true
 
       // Verify task state
       expect(model).to.have.property('preprocessingExprsReady', true)
       expect(model).to.have.property('sourcesReady', true)
       expect(model).to.have.property('stanCheckReady', false)
+      expect(model).to.have.property('stanCloseReady', false)
       expect(model).to.have.property('stanReady', true)
       expect(model).to.have.property('staticRulesReady', true)
-      expect(model).to.have.property('subscriptionsCloseReady', false)
       expect(model).to.have.property('subscriptionsReady', true)
       expect(model).to.have.property('versionTsReady', false)
 
       // Check for defaults
-      expect(model).to.have.nested.property('sources.dpe_patch_v1_out.some_default', 'default')
+      expect(model).to.have.nested.property('sources.prep_in.some_default', 'default')
     })
   })
 
-  it('should prep for 5 seconds', function () {
-    return new Promise(resolve => setTimeout(resolve, 5000)).then(() => {
-      delete model.versionTs
+  it('should process csi data', function () {
+    return helper.loadData(dataFileName.csiOut).then(data => {
+      const msgStr = JSON.stringify(data)
+
+      return new Promise((resolve, reject) => {
+        model.private.stan.publish('prep.in', msgStr, (err, guid) => err ? reject(err) : resolve(guid))
+      })
     })
   })
 
-  it('should spin down for 5 seconds', function () {
+  it('should subscribe to prepared messages', function () {
+    const opts = model.private.stan.subscriptionOptions()
+    opts.setDeliverAllAvailable()
+    opts.setDurableName('prep`')
+
+    sub = model.private.stan.subscribe('prep.out', opts)
+    messages = []
+    sub.on('message', msg => {
+      messages.push(JSON.parse(msg.getData()))
+    })
+  })
+
+  it('should wait for 5 seconds to collect messages', function () {
     return new Promise(resolve => setTimeout(resolve, 5000))
+  })
+
+  it('should have prepared messages', function () {
+    expect(messages).to.have.lengthOf(1)
+    expect(messages).to.have.nested.property('0.payload.options.database', 'ucnrs__ucac_angelo')
+    expect(messages).to.have.nested.property('0.payload.options.precision', 'ms')
+    expect(messages).to.have.nested.property('0.payload.points.0.time', 1545663600000)
+    expect(messages).to.have.nested.property('0.payload.points.0.measurement', 'source_tenmin')
+    expect(messages).to.have.nested.property('0.payload.points.0.fields.Extra', 1545663600000)
+    expect(messages).to.have.nested.property('0.payload.points.0.fields.Day_of_Year', 358)
+  })
+
+  it('should process decoded data', function () {
+    messages = []
+
+    return helper.loadData(dataFileName.decodePseudoBinaryOut).then(data => {
+      const msgStr = JSON.stringify(data)
+
+      return new Promise((resolve, reject) => {
+        model.private.stan.publish('prep.in', msgStr, (err, guid) => err ? reject(err) : resolve(guid))
+      })
+    })
+  })
+
+  it('should wait for 5 seconds to collect messages', function () {
+    return new Promise(resolve => setTimeout(resolve, 5000))
+  })
+
+  it('should have prepared messages', function () {
+    sub.removeAllListeners()
+
+    expect(messages).to.have.lengthOf(1)
+    expect(messages).to.have.nested.property('0.payload.options.database', 'ucnrs__ucbu_burns')
+    expect(messages).to.have.nested.property('0.payload.options.precision', 'ms')
+    expect(messages).to.have.nested.property('0.payload.points.0.time', 1545660000000)
+    expect(messages).to.have.nested.property('0.payload.points.0.measurement', 'source_goes_tenmin')
+    expect(messages).to.have.nested.property('0.payload.points.0.fields.Extra', 1545660000000)
+    expect(messages).to.have.nested.property('0.payload.points.0.fields.col01', 358)
   })
 })

@@ -3,8 +3,8 @@ module.exports = {
   sources: require('./tasks/sources'),
   stan: require('./tasks/stan'),
   stanCheck: require('./tasks/stanCheck'),
+  stanClose: require('./tasks/stanClose'),
   staticRules: require('./tasks/staticRules'),
   subscriptions: require('./tasks/decodePseudoBinary/subscriptions'),
-  subscriptionsClose: require('./tasks/subscriptionsClose'),
   versionTs: require('./tasks/versionTs')
 }

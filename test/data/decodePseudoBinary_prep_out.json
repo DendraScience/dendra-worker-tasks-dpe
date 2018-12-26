@@ -1,0 +1,50 @@
+{
+  "context": {
+    "imported_at": "2018-12-24T14:20:39.873Z",
+    "org_slug": "ucnrs",
+    "station": "ucbu_burns",
+    "table": "GOES_TenMin"
+  },
+  "payload": {
+    "options": {
+      "database": "ucnrs__ucbu_burns",
+      "precision": "ms"
+    },
+    "points": [
+      {
+        "fields": {
+          "Extra": 1545660000000,
+          "col01": 358,
+          "col02": 600,
+          "col03": 0,
+          "col04": 0,
+          "col05": 0,
+          "col06": 0,
+          "col07": 0,
+          "col08": 0,
+          "col09": 0,
+          "col10": 0.281,
+          "col11": 0.267,
+          "col12": 338,
+          "col13": 12.09,
+          "col14": 1.209,
+          "col15": 0,
+          "col16": 0.349,
+          "col17": 2.583,
+          "col18": 1.898,
+          "col19": 2.221,
+          "col20": 66.22,
+          "col21": 62.45,
+          "col22": 64.45,
+          "col23": -14.85,
+          "col24": 0,
+          "col25": 83.8,
+          "col26": -0.284,
+          "col27": 3.521
+        },
+        "measurement": "source_goes_tenmin",
+        "time": 1545660000000
+      }
+    ]
+  }
+}

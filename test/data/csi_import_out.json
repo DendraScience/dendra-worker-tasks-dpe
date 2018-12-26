@@ -1,0 +1,405 @@
+{
+  "context": {
+    "imported_at": "2018-12-24T15:13:00.811Z",
+    "org_slug": "ucnrs"
+  },
+  "payload": {
+    "fields": [
+      {
+        "name": "Day_of_Year",
+        "process": "Smp",
+        "type": "xsd:float",
+        "units": "_day_of_year",
+        "value": 358
+      },
+      {
+        "name": "HourMin",
+        "process": "Smp",
+        "type": "xsd:float",
+        "units": "hours_min",
+        "value": 700
+      },
+      {
+        "name": "RS_kw_m2_Avg",
+        "process": "Avg",
+        "type": "xsd:float",
+        "units": "kW/m²",
+        "value": 0
+      },
+      {
+        "name": "RS_kw_m2_Max",
+        "process": "Max",
+        "type": "xsd:float",
+        "units": "kW/m²",
+        "value": 0
+      },
+      {
+        "name": "RS_kw_m2_Min",
+        "process": "Min",
+        "type": "xsd:float",
+        "units": "kW/m²",
+        "value": 0
+      },
+      {
+        "name": "RS_kw_m2_Std",
+        "process": "Std",
+        "type": "xsd:float",
+        "units": "kW/m²",
+        "value": 0
+      },
+      {
+        "name": "PAR_Avg",
+        "process": "Avg",
+        "type": "xsd:float",
+        "units": "mmol/s/m²",
+        "value": 0
+      },
+      {
+        "name": "PAR_Max",
+        "process": "Max",
+        "type": "xsd:float",
+        "units": "mmol/s/m²",
+        "value": 0
+      },
+      {
+        "name": "PAR_Min",
+        "process": "Min",
+        "type": "xsd:float",
+        "units": "mmol/s/m²",
+        "value": 0
+      },
+      {
+        "name": "mean_wind_vel",
+        "process": "WVc",
+        "type": "xsd:float",
+        "units": "m/s",
+        "value": 0.796
+      },
+      {
+        "name": "mean_wind_vector_mag",
+        "process": "WVc",
+        "type": "xsd:float",
+        "units": "m/s",
+        "value": 0.563
+      },
+      {
+        "name": "mean_vector_wind_dir",
+        "process": "WVc",
+        "type": "xsd:float",
+        "units": "Deg",
+        "value": 14.18
+      },
+      {
+        "name": "sd_wind_dir",
+        "process": "WVc",
+        "type": "xsd:float",
+        "units": "Deg",
+        "value": 43.79
+      },
+      {
+        "name": "WS_ms_Max",
+        "process": "Max",
+        "type": "xsd:float",
+        "units": "m/s",
+        "value": 1.731
+      },
+      {
+        "name": "WS_ms_Min",
+        "process": "Min",
+        "type": "xsd:float",
+        "units": "m/s",
+        "value": 0.294
+      },
+      {
+        "name": "WS_ms_Std",
+        "process": "Std",
+        "type": "xsd:float",
+        "units": "m/s",
+        "value": 0.293
+      },
+      {
+        "name": "AT_C_Max",
+        "process": "Max",
+        "type": "xsd:float",
+        "units": "°C",
+        "value": 6.782
+      },
+      {
+        "name": "AT_C_Min",
+        "process": "Min",
+        "type": "xsd:float",
+        "units": "°C",
+        "value": 6.577
+      },
+      {
+        "name": "AT_C_Avg",
+        "process": "Avg",
+        "type": "xsd:float",
+        "units": "°C",
+        "value": 6.643
+      },
+      {
+        "name": "RH_pct_Max",
+        "process": "Max",
+        "type": "xsd:float",
+        "units": "%",
+        "value": 99.7
+      },
+      {
+        "name": "RH_pct_Min",
+        "process": "Min",
+        "type": "xsd:float",
+        "units": "%",
+        "value": 99.4
+      },
+      {
+        "name": "RH_pct_Avg",
+        "process": "Avg",
+        "type": "xsd:float",
+        "units": "%",
+        "value": 99.5
+      },
+      {
+        "name": "BP_mB_Avg",
+        "process": "Avg",
+        "type": "xsd:float",
+        "units": "mB",
+        "value": 969.4357
+      },
+      {
+        "name": "PCPN_intrvl_Tot",
+        "process": "Tot",
+        "type": "xsd:float",
+        "units": "mm",
+        "value": 0.508
+      },
+      {
+        "name": "PCPN_accumulated",
+        "process": "Smp",
+        "type": "xsd:float",
+        "units": "mm",
+        "value": 568.7086
+      },
+      {
+        "name": "RGTemp_C_Avg",
+        "process": "Avg",
+        "type": "xsd:float",
+        "units": "°C",
+        "value": 6.855
+      },
+      {
+        "name": "TC_C_2_Max",
+        "process": "Max",
+        "type": "xsd:float",
+        "units": "°C",
+        "value": 7.153
+      },
+      {
+        "name": "TC_C_2_Min",
+        "process": "Min",
+        "type": "xsd:float",
+        "units": "°C",
+        "value": 6.749
+      },
+      {
+        "name": "TC_C_2_Avg",
+        "process": "Avg",
+        "type": "xsd:float",
+        "units": "°C",
+        "value": 6.929
+      },
+      {
+        "name": "TC_C_10_Max",
+        "process": "Max",
+        "type": "xsd:float",
+        "units": "°C",
+        "value": 7.148
+      },
+      {
+        "name": "TC_C_10_Min",
+        "process": "Min",
+        "type": "xsd:float",
+        "units": "°C",
+        "value": 6.68
+      },
+      {
+        "name": "TC_C_10_Avg",
+        "process": "Avg",
+        "type": "xsd:float",
+        "units": "°C",
+        "value": 6.893
+      },
+      {
+        "name": "delta_T_C_Max",
+        "process": "Max",
+        "type": "xsd:float",
+        "units": "°C",
+        "value": 0.243
+      },
+      {
+        "name": "delta_T_C_Min",
+        "process": "Min",
+        "type": "xsd:float",
+        "units": "°C",
+        "value": -0.243
+      },
+      {
+        "name": "delta_T_C_Avg",
+        "process": "Avg",
+        "type": "xsd:float",
+        "units": "°C",
+        "value": -0.036
+      },
+      {
+        "name": "Soil_T50_C_Max",
+        "process": "Max",
+        "type": "xsd:float",
+        "units": "°C",
+        "value": 7.962
+      },
+      {
+        "name": "Soil_T50_C_Min",
+        "process": "Min",
+        "type": "xsd:float",
+        "units": "°C",
+        "value": 7.616
+      },
+      {
+        "name": "Soil_T50_C_Avg",
+        "process": "Avg",
+        "type": "xsd:float",
+        "units": "°C",
+        "value": 7.788
+      },
+      {
+        "name": "Soil_T100_C_Max",
+        "process": "Max",
+        "type": "xsd:float",
+        "units": "°C",
+        "value": 8.42
+      },
+      {
+        "name": "Soil_T100_C_Min",
+        "process": "Min",
+        "type": "xsd:float",
+        "units": "°C",
+        "value": 8.15
+      },
+      {
+        "name": "Soil_T100_C_Avg",
+        "process": "Avg",
+        "type": "xsd:float",
+        "units": "°C",
+        "value": 8.29
+      },
+      {
+        "name": "Soil_T200_C_Max",
+        "process": "Max",
+        "type": "xsd:float",
+        "units": "°C",
+        "value": 8.71
+      },
+      {
+        "name": "Soil_T200_C_Min",
+        "process": "Min",
+        "type": "xsd:float",
+        "units": "°C",
+        "value": 8.42
+      },
+      {
+        "name": "Soil_T200_C_Avg",
+        "process": "Avg",
+        "type": "xsd:float",
+        "units": "°C",
+        "value": 8.56
+      },
+      {
+        "name": "Soil_T500_C_Max",
+        "process": "Max",
+        "type": "xsd:float",
+        "units": "°C",
+        "value": 9.59
+      },
+      {
+        "name": "Soil_T500_C_Min",
+        "process": "Min",
+        "type": "xsd:float",
+        "units": "°C",
+        "value": 9.28
+      },
+      {
+        "name": "Soil_T500_C_Avg",
+        "process": "Avg",
+        "type": "xsd:float",
+        "units": "°C",
+        "value": 9.43
+      },
+      {
+        "name": "VWC50_Avg",
+        "process": "Avg",
+        "type": "xsd:float",
+        "units": "% H2O",
+        "value": 0.33
+      },
+      {
+        "name": "VWC_V_Avg",
+        "process": "Avg",
+        "type": "xsd:float",
+        "units": "% H2O",
+        "value": 0.256
+      },
+      {
+        "name": "CS616_50_Avg",
+        "process": "Avg",
+        "type": "xsd:float",
+        "units": "uSec",
+        "value": 28.7
+      },
+      {
+        "name": "CS616_V_Avg",
+        "process": "Avg",
+        "type": "xsd:float",
+        "units": "uSec",
+        "value": 26.43
+      },
+      {
+        "name": "Batt_volt_Max",
+        "process": "Max",
+        "type": "xsd:float",
+        "units": "volts",
+        "value": 12.1
+      },
+      {
+        "name": "Batt_volt_Min",
+        "process": "Min",
+        "type": "xsd:float",
+        "units": "volts",
+        "value": 12.09
+      },
+      {
+        "name": "Batt_volt_Avg",
+        "process": "Avg",
+        "type": "xsd:float",
+        "units": "volts",
+        "value": 12.09
+      },
+      {
+        "name": "PTemp_Avg",
+        "process": "Avg",
+        "type": "xsd:float",
+        "units": "°C",
+        "value": 7.359
+      },
+      {
+        "name": "Sta_ID",
+        "process": "Smp",
+        "type": "xsd:float",
+        "value": 412
+      }
+    ],
+    "recordNumber": 17829,
+    "station": "ucac_angelo",
+    "table": "TenMin",
+    "timeString": "2018-12-24T07:00:00"
+  }
+}
