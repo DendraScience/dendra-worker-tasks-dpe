@@ -5,12 +5,11 @@
 const Influx = require('influx')
 
 module.exports = {
-  guard (m) {
-    return !m.influxError &&
-      !m.private.influx
+  guard(m) {
+    return !m.influxError && !m.private.influx
   },
 
-  execute (m, { logger }) {
+  execute(m, { logger }) {
     const cfg = m.$app.get('clients').influx
     const influx = new Influx.InfluxDB(cfg)
 
@@ -19,7 +18,7 @@ module.exports = {
     return influx.ping(5000).then(hosts => ({ hosts, influx }))
   },
 
-  assign (m, res, { logger }) {
+  assign(m, res, { logger }) {
     res.hosts.forEach(host => {
       const { url, online, rtt, version } = host
       if (online) {

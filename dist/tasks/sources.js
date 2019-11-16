@@ -1,9 +1,8 @@
-'use strict';
+"use strict";
 
 /**
  * Prepare model sources if not defined, or when new state is detected.
  */
-
 module.exports = {
   guard(m) {
     return !m.sourcesError && m.state.sources && m.state.sources.length > 0 && m.sourcesTs !== m.versionTs;
@@ -14,7 +13,6 @@ module.exports = {
       if (src.sub_to_subject) {
         const sourceKey = src.sub_to_subject.replace(/\W/g, '_');
         const source = Object.assign({}, m.state.source_defaults, src);
-
         sources[sourceKey] = source;
 
         if (source.error_subject) {
@@ -28,11 +26,15 @@ module.exports = {
     }, {});
   },
 
-  assign(m, res, { logger }) {
+  assign(m, res, {
+    logger
+  }) {
     m.sourceKeys = Object.keys(res);
     m.sources = res;
     m.sourcesTs = m.versionTs;
-
-    logger.info('Sources ready', { sourceKeys: m.sourceKeys });
+    logger.info('Sources ready', {
+      sourceKeys: m.sourceKeys
+    });
   }
+
 };

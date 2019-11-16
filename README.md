@@ -2,10 +2,9 @@
 
 Dendra Worker tasks for archiving, transforming and loading data. These are the core tasks for the Dendra Data Processing Engine (DPE).
 
-
 ## Instructions
 
-1. Be sure you have Node version 8.7.x. If you’re using nvm, you may need to `nvm use 8.7`.
+1. Be sure you have Node version 10.15.1. If you’re using nvm, you may need to `nvm use 10.15.1`.
 
 2. Clone this repo.
 

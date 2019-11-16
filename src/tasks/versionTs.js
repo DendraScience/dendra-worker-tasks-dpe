@@ -3,11 +3,13 @@
  */
 
 module.exports = {
-  clear (m) {
+  clear(m) {
     m.versionTs = m.state.created_at.getTime()
   },
 
-  guard (m) { return false }, // Never run
+  guard(m) {
+    return false
+  }, // Never run
 
-  execute () {}
+  execute() {}
 }

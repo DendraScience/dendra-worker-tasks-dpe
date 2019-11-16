@@ -2,9 +2,10 @@
  * Subscribe to subjects after preprocessing expressions are ready. Add an event listener for messages.
  */
 
-async function processItem (
+async function processItem(
   { data, dataObj, msgSeq },
-  { documentService, errorSubject, logger, preprocessingExpr, stan, subSubject }) {
+  { documentService, errorSubject, logger, preprocessingExpr, stan, subSubject }
+) {
   try {
     /*
       Throttle re-processing of messages from error subject.
@@ -19,9 +20,13 @@ async function processItem (
      */
 
     const preRes = await new Promise((resolve, reject) => {
-      preprocessingExpr.evaluate(dataObj, {
-        env: () => ({ errorSubject, msgSeq, subSubject })
-      }, (err, res) => err ? reject(err) : resolve(res))
+      preprocessingExpr.evaluate(
+        dataObj,
+        {
+          env: () => ({ errorSubject, msgSeq, subSubject })
+        },
+        (err, res) => (err ? reject(err) : resolve(res))
+      )
     })
 
     if (!preRes) throw new Error('Preprocessing result undefined')
@@ -39,7 +44,8 @@ async function processItem (
     }
 
     const { document_id: paramDocId } = params
-    if (typeof paramDocId !== 'string') throw new Error('Invalid params.document_id')
+    if (typeof paramDocId !== 'string')
+      throw new Error('Invalid params.document_id')
 
     /*
       Create document in archive.
@@ -55,21 +61,28 @@ async function processItem (
 
     logger.info('Archived', { msgSeq, subSubject, _id: doc._id })
   } catch (err) {
-    if (errorSubject && (subSubject !== errorSubject)) {
+    if (errorSubject && subSubject !== errorSubject) {
       logger.error('Processing error', { msgSeq, subSubject, err, dataObj })
 
       const guid = await new Promise((resolve, reject) => {
-        stan.publish(errorSubject, data, (err, guid) => err ? reject(err) : resolve(guid))
+        stan.publish(errorSubject, data, (err, guid) =>
+          err ? reject(err) : resolve(guid)
+        )
       })
 
-      logger.info('Published to error subject', { msgSeq, subSubject, errorSubject, guid })
+      logger.info('Published to error subject', {
+        msgSeq,
+        subSubject,
+        errorSubject,
+        guid
+      })
     } else {
       throw err
     }
   }
 }
 
-function handleMessage (msg) {
+function handleMessage(msg) {
   const { logger, m, subSubject } = this
 
   if (!msg) {
@@ -90,26 +103,38 @@ function handleMessage (msg) {
     const data = msg.getData()
     const dataObj = JSON.parse(data)
 
-    processItem({ data, dataObj, msgSeq }, this).then(() => msg.ack()).catch(err => {
-      logger.error('Message processing error', { msgSeq, subSubject, err, dataObj })
-    })
+    processItem({ data, dataObj, msgSeq }, this)
+      .then(() => msg.ack())
+      .catch(err => {
+        logger.error('Message processing error', {
+          msgSeq,
+          subSubject,
+          err,
+          dataObj
+        })
+      })
   } catch (err) {
     logger.error('Message error', { msgSeq, subSubject, err })
   }
 }
 
 module.exports = {
-  guard (m) {
-    return !m.subscriptionsError &&
-      m.private.stan && m.stanConnected &&
-      (m.preprocessingExprsTs === m.versionTs) &&
-      (m.subscriptionsTs !== m.versionTs) &&
+  guard(m) {
+    return (
+      !m.subscriptionsError &&
+      m.private.stan &&
+      m.stanConnected &&
+      m.preprocessingExprsTs === m.versionTs &&
+      m.subscriptionsTs !== m.versionTs &&
       !m.private.subscriptions
+    )
   },
 
-  execute (m, { logger }) {
+  execute(m, { logger }) {
     const { preprocessingExprs, stan } = m.private
-    const documentService = m.$app.get('connections').archiveStore.app.service('/documents')
+    const documentService = m.$app
+      .get('connections')
+      .archiveStore.app.service('/documents')
     const subs = []
 
     m.sourceKeys.forEach(sourceKey => {
@@ -123,7 +148,10 @@ module.exports = {
       const preprocessingExpr = preprocessingExprs[sourceKey]
 
       if (!preprocessingExpr) {
-        logger.warn('Subscription skipped, no preprocessing expression found', { sourceKey, subSubject })
+        logger.warn('Subscription skipped, no preprocessing expression found', {
+          sourceKey,
+          subSubject
+        })
         return
       }
 
@@ -135,21 +163,29 @@ module.exports = {
         opts.setMaxInFlight(1)
 
         if (subOptions) {
-          if (typeof subOptions.ack_wait === 'number') opts.setAckWait(subOptions.ack_wait)
-          if (typeof subOptions.durable_name === 'string') opts.setDurableName(subOptions.durable_name)
+          if (typeof subOptions.ack_wait === 'number')
+            opts.setAckWait(subOptions.ack_wait)
+          if (typeof subOptions.durable_name === 'string')
+            opts.setDurableName(subOptions.durable_name)
         }
 
-        const sub = (typeof queueGroup === 'string') ? stan.subscribe(subSubject, queueGroup, opts) : stan.subscribe(subSubject, opts)
+        const sub =
+          typeof queueGroup === 'string'
+            ? stan.subscribe(subSubject, queueGroup, opts)
+            : stan.subscribe(subSubject, opts)
 
-        sub.on('message', handleMessage.bind({
-          documentService,
-          errorSubject,
-          logger,
-          m,
-          preprocessingExpr,
-          stan,
-          subSubject
-        }))
+        sub.on(
+          'message',
+          handleMessage.bind({
+            documentService,
+            errorSubject,
+            logger,
+            m,
+            preprocessingExpr,
+            stan,
+            subSubject
+          })
+        )
 
         subs.push(sub)
       } catch (err) {
@@ -160,7 +196,7 @@ module.exports = {
     return subs
   },
 
-  assign (m, res, { logger }) {
+  assign(m, res, { logger }) {
     m.private.subscriptions = res
     m.subscriptionsTs = m.versionTs
 

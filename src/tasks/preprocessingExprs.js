@@ -6,13 +6,15 @@ const jsonata = require('jsonata')
 const { registerHelpers } = require('../lib/jsonata-utils')
 
 module.exports = {
-  guard (m) {
-    return !m.preprocessingExprsError &&
-      (m.sourcesTs === m.versionTs) &&
-      (m.preprocessingExprsTs !== m.versionTs)
+  guard(m) {
+    return (
+      !m.preprocessingExprsError &&
+      m.sourcesTs === m.versionTs &&
+      m.preprocessingExprsTs !== m.versionTs
+    )
   },
 
-  execute (m, { logger }) {
+  execute(m, { logger }) {
     return m.sourceKeys.reduce((objs, sourceKey) => {
       const source = m.sources[sourceKey]
       const expr = source.preprocessing_expr
@@ -21,10 +23,14 @@ module.exports = {
         logger.warn('Preprocessing expression must be an Array', { sourceKey })
       } else {
         try {
-          const obj = objs[sourceKey] = jsonata(expr.join(' '))
+          const obj = (objs[sourceKey] = jsonata(expr.join(' ')))
           registerHelpers(obj)
         } catch (err) {
-          logger.info('Preprocessing expression error', { err, expr, sourceKey })
+          logger.info('Preprocessing expression error', {
+            err,
+            expr,
+            sourceKey
+          })
         }
       }
 
@@ -32,7 +38,7 @@ module.exports = {
     }, {})
   },
 
-  assign (m, res, { logger }) {
+  assign(m, res, { logger }) {
     m.private.preprocessingExprs = res
     m.preprocessingExprsTs = m.versionTs
 

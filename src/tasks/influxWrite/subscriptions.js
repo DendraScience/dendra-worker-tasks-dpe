@@ -12,19 +12,23 @@ const debounce = require('lodash/debounce')
  * Class for batch writing points to Influx.
  */
 class PointsWriter {
-  constructor (...opts) {
+  constructor(...opts) {
     Object.assign(this, ...opts, {
       callbacks: [],
       points: []
     })
 
-    this.debouncedWrite = debounce(this.write.bind(this), this.batch_interval || 1000, {
-      leading: false,
-      trailing: true
-    })
+    this.debouncedWrite = debounce(
+      this.write.bind(this),
+      this.batch_interval || 1000,
+      {
+        leading: false,
+        trailing: true
+      }
+    )
   }
 
-  static cached (key, ...opts) {
+  static cached(key, ...opts) {
     let { cache } = this
     if (!cache) cache = this.cache = new LRU(60) // TODO: Make configurable
 
@@ -38,13 +42,12 @@ class PointsWriter {
     return writer
   }
 
-  push (pts, cb) {
+  check(cb) {
     const { callbacks, options, points, debouncedWrite } = this
 
-    points.push(...pts)
     callbacks.push(cb)
 
-    this.logger.info(`Pushed (${pts.length}) point(s), (${points.length}) queued`, options)
+    this.logger.info(`Checking (${points.length}) point(s)`, options)
 
     if (points.length >= this.batch_size) {
       this.logger.info('Flushing queue', this.options)
@@ -55,7 +58,7 @@ class PointsWriter {
     }
   }
 
-  async write () {
+  async write() {
     const { callbacks, influx, options, points } = this
     this.points = []
     this.callbacks = []
@@ -82,7 +85,7 @@ class PointsWriter {
         callbacks.forEach(cb => cb())
         stop = true
       } catch (err) {
-        if (!createDb && err.res && (err.res.statusCode === 404)) {
+        if (!createDb && err.res && err.res.statusCode === 404) {
           this.logger.warn('Writing failed, database not found', this.options)
 
           createDb = true
@@ -95,9 +98,19 @@ class PointsWriter {
   }
 }
 
-async function processItem (
+async function processItem(
   { data, dataObj, msgSeq },
-  { errorSubject, influx, logger, pubSubject, stan, subSubject, writerOptions }) {
+  {
+    changeLogSubject,
+    errorSubject,
+    influx,
+    logger,
+    pubSubject,
+    stan,
+    subSubject,
+    writerOptions
+  }
+) {
   try {
     /*
       Throttle re-processing of messages from error subject.
@@ -119,55 +132,112 @@ async function processItem (
     if (!Array.isArray(points)) throw new Error('Invalid payload.points')
 
     /*
-      Map time values to timestamp.
-     */
-
-    points.forEach((point, i) => {
-      if (typeof point.time === 'undefined') return
-
-      const time = moment(point.time).utc()
-      if (!(time && time.isValid())) throw new Error(`Invalid points[${i}].time format`)
-
-      point.timestamp = time.toDate()
-      delete point.time
-    })
-
-    /*
       Get cached writer, or create/cache a writer.
      */
 
     // TODO: Construct a better object hash
-    const writer = PointsWriter.cached(`${options.database}$${options.precision}$${options.retentionPolicy}`, {
-      influx,
-      logger,
-      options
-    }, writerOptions)
+    const writer = PointsWriter.cached(
+      `${options.database}$${options.precision}$${options.retentionPolicy}`,
+      {
+        influx,
+        logger,
+        options
+      },
+      writerOptions
+    )
 
     /*
-      Enqueue points for writing.
+      Map time values to timestamp. Enqueue points for writing.
      */
 
+    const beforeLength = writer.points.length
+    const writes = new Map()
+
+    for (let i = 0; i < points.length; i++) {
+      const point = points[i]
+      const { measurement } = point
+
+      if (!measurement || point.time === undefined) continue
+
+      const time = moment(point.time).utc()
+      if (!(time && time.isValid()))
+        throw new Error(`Invalid points[${i}].time format`)
+
+      const timeValue = time.valueOf()
+      let write = writes.get(measurement)
+      if (!write) {
+        write = {
+          measurement,
+          pointsCount: 0,
+          timeMax: timeValue,
+          timeMin: timeValue
+        }
+        writes.set(measurement, write)
+      }
+
+      write.pointsCount++
+      write.timeMax = Math.max(write.timeMax, timeValue)
+      write.timeMin = Math.min(write.timeMin, timeValue)
+
+      point.timestamp = time.toDate()
+      delete point.time
+
+      writer.points.push(point)
+    }
+
+    logger.info(`Pushed (${writer.points.length - beforeLength}) point(s)`)
+
     await new Promise((resolve, reject) => {
-      writer.push(points, err => err ? reject(err) : resolve())
+      writer.check(err => (err ? reject(err) : resolve()))
     })
 
     logger.info('Point(s) written', { msgSeq, subSubject })
+
+    if (changeLogSubject) {
+      const msgStr = JSON.stringify({
+        context: Object.assign({}, dataObj.context),
+        payload: {
+          options,
+          writes: [...writes.values()]
+        }
+      })
+
+      const guid = await new Promise((resolve, reject) => {
+        stan.publish(changeLogSubject, msgStr, (err, guid) =>
+          err ? reject(err) : resolve(guid)
+        )
+      })
+
+      logger.info('Published to change log subject', {
+        msgSeq,
+        subSubject,
+        changeLogSubject,
+        guid
+      })
+    }
   } catch (err) {
-    if (errorSubject && (subSubject !== errorSubject)) {
+    if (errorSubject && subSubject !== errorSubject) {
       logger.error('Processing error', { msgSeq, subSubject, err, dataObj })
 
       const guid = await new Promise((resolve, reject) => {
-        stan.publish(errorSubject, data, (err, guid) => err ? reject(err) : resolve(guid))
+        stan.publish(errorSubject, data, (err, guid) =>
+          err ? reject(err) : resolve(guid)
+        )
       })
 
-      logger.info('Published to error subject', { msgSeq, subSubject, errorSubject, guid })
+      logger.info('Published to error subject', {
+        msgSeq,
+        subSubject,
+        errorSubject,
+        guid
+      })
     } else {
       throw err
     }
   }
 }
 
-function handleMessage (msg) {
+function handleMessage(msg) {
   const { logger, m, subSubject } = this
 
   if (!msg) {
@@ -188,31 +258,42 @@ function handleMessage (msg) {
     const data = msg.getData()
     const dataObj = JSON.parse(data)
 
-    processItem({ data, dataObj, msgSeq }, this).then(() => msg.ack()).catch(err => {
-      logger.error('Message processing error', { msgSeq, subSubject, err, dataObj })
-    })
+    processItem({ data, dataObj, msgSeq }, this)
+      .then(() => msg.ack())
+      .catch(err => {
+        logger.error('Message processing error', {
+          msgSeq,
+          subSubject,
+          err,
+          dataObj
+        })
+      })
   } catch (err) {
     logger.error('Message error', { msgSeq, subSubject, err })
   }
 }
 
 module.exports = {
-  guard (m) {
-    return !m.subscriptionsError &&
-      m.private.stan && m.stanConnected &&
+  guard(m) {
+    return (
+      !m.subscriptionsError &&
+      m.private.stan &&
+      m.stanConnected &&
       m.private.influx &&
-      (m.sourcesTs === m.versionTs) &&
-      (m.subscriptionsTs !== m.versionTs) &&
+      m.sourcesTs === m.versionTs &&
+      m.subscriptionsTs !== m.versionTs &&
       !m.private.subscriptions
+    )
   },
 
-  execute (m, { logger }) {
+  execute(m, { logger }) {
     const { influx, stan } = m.private
     const subs = []
 
     m.sourceKeys.forEach(sourceKey => {
       const source = m.sources[sourceKey]
       const {
+        change_log_subject: changeLogSubject,
         error_subject: errorSubject,
         pub_to_subject: pubSubject,
         sub_options: subOptions,
@@ -227,23 +308,30 @@ module.exports = {
         opts.setDeliverAllAvailable()
 
         if (subOptions) {
-          if (typeof subOptions.ack_wait === 'number') opts.setAckWait(subOptions.ack_wait)
-          if (typeof subOptions.durable_name === 'string') opts.setDurableName(subOptions.durable_name)
-          if (typeof subOptions.max_in_flight === 'number') opts.setMaxInFlight(subOptions.max_in_flight)
+          if (typeof subOptions.ack_wait === 'number')
+            opts.setAckWait(subOptions.ack_wait)
+          if (typeof subOptions.durable_name === 'string')
+            opts.setDurableName(subOptions.durable_name)
+          if (typeof subOptions.max_in_flight === 'number')
+            opts.setMaxInFlight(subOptions.max_in_flight)
         }
 
         const sub = stan.subscribe(subSubject, opts)
 
-        sub.on('message', handleMessage.bind({
-          errorSubject,
-          influx,
-          logger,
-          m,
-          pubSubject,
-          stan,
-          subSubject,
-          writerOptions
-        }))
+        sub.on(
+          'message',
+          handleMessage.bind({
+            changeLogSubject,
+            errorSubject,
+            influx,
+            logger,
+            m,
+            pubSubject,
+            stan,
+            subSubject,
+            writerOptions
+          })
+        )
 
         subs.push(sub)
       } catch (err) {
@@ -254,7 +342,7 @@ module.exports = {
     return subs
   },
 
-  assign (m, res, { logger }) {
+  assign(m, res, { logger }) {
     m.private.subscriptions = res
     m.subscriptionsTs = m.versionTs
 

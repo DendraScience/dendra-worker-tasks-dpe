@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 module.exports = {
   preprocessingExprs: require('./tasks/preprocessingExprs'),

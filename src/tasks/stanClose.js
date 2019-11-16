@@ -3,13 +3,17 @@
  */
 
 module.exports = {
-  guard (m) {
-    return !m.stanCloseError && !m.stanCloseReady &&
-      m.private.stan && m.stanConnected &&
-      (m.versionTs > m.stanTs)
+  guard(m) {
+    return (
+      !m.stanCloseError &&
+      !m.stanCloseReady &&
+      m.private.stan &&
+      m.stanConnected &&
+      m.versionTs > m.stanTs
+    )
   },
 
-  execute (m, { logger }) {
+  execute(m, { logger }) {
     logger.info('NATS Streaming closing')
 
     m.private.stan.close()

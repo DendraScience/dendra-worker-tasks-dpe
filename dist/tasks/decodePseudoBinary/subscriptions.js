@@ -1,20 +1,39 @@
-'use strict';
+"use strict";
 
 /**
  * Subscribe to subjects after preprocessing expressions are ready. Add an event listener for messages.
  */
-
 const LRU = require('modern-lru');
-const moment = require('../../lib/moment-fn');
-const { Decoder } = require('@dendra-science/goes-pseudo-binary');
-const { MomentEditor } = require('@dendra-science/utils-moment');
 
-async function processItem({ data, dataObj, msgSeq }, { decoderCache, editorCache, errorSubject, logger, preprocessingExpr, pubSubject, stan, staticRules, subSubject }) {
+const moment = require('../../lib/moment-fn');
+
+const {
+  Decoder
+} = require('@dendra-science/goes-pseudo-binary');
+
+const {
+  MomentEditor
+} = require('@dendra-science/utils-moment');
+
+async function processItem({
+  data,
+  dataObj,
+  msgSeq
+}, {
+  decoderCache,
+  editorCache,
+  errorSubject,
+  logger,
+  preprocessingExpr,
+  pubSubject,
+  stan,
+  staticRules,
+  subSubject
+}) {
   try {
     /*
       Throttle re-processing of messages from error subject.
      */
-
     // if (subSubject === errorSubject) {
     //   await new Promise(resolve => setTimeout(resolve, 1000))
     // }
@@ -22,34 +41,44 @@ async function processItem({ data, dataObj, msgSeq }, { decoderCache, editorCach
     /*
       Preprocess inbound message data.
      */
-
     const preRes = await new Promise((resolve, reject) => {
       preprocessingExpr.evaluate(dataObj, {
-        env: () => ({ errorSubject, msgSeq, pubSubject, subSubject })
+        env: () => ({
+          errorSubject,
+          msgSeq,
+          pubSubject,
+          subSubject
+        })
       }, (err, res) => err ? reject(err) : resolve(res));
     });
-
     if (!preRes) throw new Error('Preprocessing result undefined');
-
-    const { params, payload } = preRes;
-
+    const {
+      params,
+      payload
+    } = preRes;
     if (!payload) throw new Error('Missing payload object');
     if (!params) throw new Error('Missing params object');
-
-    logger.info('Preprocessing params', { msgSeq, subSubject, params });
+    logger.info('Preprocessing params', {
+      msgSeq,
+      subSubject,
+      params
+    });
 
     if (params.skip === true) {
-      logger.warn('Processing SKIPPED', { msgSeq, subSubject });
+      logger.warn('Processing SKIPPED', {
+        msgSeq,
+        subSubject
+      });
       return;
     }
 
     if (!Array.isArray(params.tags)) throw new Error('Invalid params.tags');
-    const { tags: paramTags } = params;
-
+    const {
+      tags: paramTags
+    } = params;
     if (typeof params.time === 'undefined') throw new Error('Invalid params.time');
     const paramTime = moment(params.time).utc();
     if (!(paramTime && paramTime.isValid())) throw new Error('Invalid params.time format');
-
     /*
       Lookup static rule for decoding.
      */
@@ -57,102 +86,107 @@ async function processItem({ data, dataObj, msgSeq }, { decoderCache, editorCach
     const staticRule = staticRules.find(rule => {
       return rule.definition && rule.definition.decode_format && rule.tags && rule.tags.every(tag => paramTags.includes(tag)) && paramTime.isBetween(rule.begins_at, rule.ends_before, null, '[)');
     });
-
     if (!staticRule) throw new Error('No static rule found');
-
     /*
       Get cached decoder, or create/cache a new decoder.
      */
 
-    const { definition } = staticRule;
+    const {
+      definition
+    } = staticRule;
     const {
       decode_columns: decodeCols,
       decode_slice: decodeSlice,
       time_edit: timeEdit,
       time_interval: timeInterval
     } = definition;
-
     let decoder = decoderCache.get(staticRule);
+
     if (!decoder) {
       decoder = new Decoder(definition.decode_format);
-
       decoderCache.set(staticRule, decoder);
     }
-
     /*
       Slice and decode buffer.
      */
 
+
     const decodeSliceArgs = Array.isArray(decodeSlice) ? decodeSlice.map(arg => arg | 0) : [0];
     const decodeRes = await decoder.decode(Buffer.from(payload).slice(...decodeSliceArgs));
-
     if (!decodeRes) throw new Error('Decode result undefined');
     if (decodeRes.error) throw new Error(`Decode error: ${decodeRes.error}`);
     if (!decodeRes.rows) throw new Error('Decode rows undefined');
-
     /*
       Get cached Moment editor, or create/cache a new editor (optional).
      */
 
     let editor = editorCache.get(staticRule);
+
     if (!editor && timeEdit) {
       editor = new MomentEditor(timeEdit);
       editorCache.set(staticRule, editor);
     }
-
     /*
       Map/reduce rows to assign column names and time.
      */
 
+
     if (!Array.isArray(decodeCols)) throw new Error('Decode columns undefined');
-
     let time = editor ? editor.edit(paramTime).valueOf() : 0;
-
     decodeRes.rows = decodeRes.rows.map(row => {
       const newRow = row.reduce((obj, cur, i) => {
         const col = decodeCols[i];
-
         if (!col) throw new Error(`Decode column [${i}] undefined`);
-
         obj[col] = cur;
         return obj;
-      }, { time });
+      }, {
+        time
+      }); // Assume rows are always in descending order
 
-      // Assume rows are always in descending order
       time -= (timeInterval | 0) * 1000;
-
       return newRow;
     });
-
     await new Promise(resolve => setImmediate(resolve));
-
-    logger.info('Decoded', { msgSeq, subSubject });
-
+    logger.info('Decoded', {
+      msgSeq,
+      subSubject
+    });
     /*
       Prepare outbound messages and publish.
      */
 
-    for (let row of decodeRes.rows) {
+    for (const row of decodeRes.rows) {
       const msgStr = JSON.stringify({
         context: preRes.context,
         payload: row
       });
-
       const guid = await new Promise((resolve, reject) => {
         stan.publish(pubSubject, msgStr, (err, guid) => err ? reject(err) : resolve(guid));
       });
-
-      logger.info('Published', { msgSeq, subSubject, pubSubject, guid });
+      logger.info('Published', {
+        msgSeq,
+        subSubject,
+        pubSubject,
+        guid
+      });
     }
   } catch (err) {
     if (errorSubject && subSubject !== errorSubject) {
-      logger.error('Processing error', { msgSeq, subSubject, err, dataObj });
-
+      logger.error('Processing error', {
+        msgSeq,
+        subSubject,
+        err,
+        dataObj
+      });
       const guid = await new Promise((resolve, reject) => {
         stan.publish(errorSubject, data, (err, guid) => err ? reject(err) : resolve(guid));
       });
-
-      logger.info('Published to error subject', { msgSeq, subSubject, errorSubject, guid });
+      logger.info('Published to error subject', {
+        msgSeq,
+        subSubject,
+        errorSubject,
+        guid
+      });
     } else {
       throw err;
     }
@@ -160,7 +194,11 @@ async function processItem({ data, dataObj, msgSeq }, { decoderCache, editorCach
 }
 
 function handleMessage(msg) {
-  const { logger, m, subSubject } = this;
+  const {
+    logger,
+    m,
+    subSubject
+  } = this;
 
   if (!msg) {
     logger.error('Message undefined');
@@ -168,23 +206,40 @@ function handleMessage(msg) {
   }
 
   const msgSeq = msg.getSequence();
-
-  logger.info('Message received', { msgSeq, subSubject });
+  logger.info('Message received', {
+    msgSeq,
+    subSubject
+  });
 
   if (m.subscriptionsTs !== m.versionTs) {
-    logger.info('Message deferred', { msgSeq, subSubject });
+    logger.info('Message deferred', {
+      msgSeq,
+      subSubject
+    });
     return;
   }
 
   try {
     const data = msg.getData();
     const dataObj = JSON.parse(data);
-
-    processItem({ data, dataObj, msgSeq }, this).then(() => msg.ack()).catch(err => {
-      logger.error('Message processing error', { msgSeq, subSubject, err, dataObj });
+    processItem({
+      data,
+      dataObj,
+      msgSeq
+    }, this).then(() => msg.ack()).catch(err => {
+      logger.error('Message processing error', {
+        msgSeq,
+        subSubject,
+        err,
+        dataObj
+      });
     });
   } catch (err) {
-    logger.error('Message error', { msgSeq, subSubject, err });
+    logger.error('Message error', {
+      msgSeq,
+      subSubject,
+      err
+    });
   }
 }
 
@@ -193,10 +248,15 @@ module.exports = {
     return !m.subscriptionsError && m.private.stan && m.stanConnected && m.preprocessingExprsTs === m.versionTs && m.staticRulesTs === m.versionTs && m.subscriptionsTs !== m.versionTs && !m.private.subscriptions;
   },
 
-  execute(m, { logger }) {
-    const { preprocessingExprs, staticRules, stan } = m.private;
+  execute(m, {
+    logger
+  }) {
+    const {
+      preprocessingExprs,
+      staticRules,
+      stan
+    } = m.private;
     const subs = [];
-
     m.sourceKeys.forEach(sourceKey => {
       const source = m.sources[sourceKey];
       const {
@@ -209,13 +269,15 @@ module.exports = {
       const preprocessingExpr = preprocessingExprs[sourceKey];
 
       if (!preprocessingExpr) {
-        logger.warn('Subscription skipped, no preprocessing expression found', { sourceKey, subSubject });
+        logger.warn('Subscription skipped, no preprocessing expression found', {
+          sourceKey,
+          subSubject
+        });
         return;
       }
 
       try {
         const opts = stan.subscriptionOptions();
-
         opts.setManualAckMode(true);
         opts.setDeliverAllAvailable();
         opts.setMaxInFlight(1);
@@ -226,10 +288,11 @@ module.exports = {
         }
 
         const sub = typeof queueGroup === 'string' ? stan.subscribe(subSubject, queueGroup, opts) : stan.subscribe(subSubject, opts);
-
         sub.on('message', handleMessage.bind({
-          decoderCache: new LRU(20), // TODO: Make configurable
-          editorCache: new LRU(20), // TODO: Make configurable
+          decoderCache: new LRU(20),
+          // TODO: Make configurable
+          editorCache: new LRU(20),
+          // TODO: Make configurable
           errorSubject,
           logger,
           m,
@@ -239,20 +302,24 @@ module.exports = {
           staticRules,
           subSubject
         }));
-
         subs.push(sub);
       } catch (err) {
-        logger.error('Subscription error', { err, sourceKey, subSubject });
+        logger.error('Subscription error', {
+          err,
+          sourceKey,
+          subSubject
+        });
       }
     });
-
     return subs;
   },
 
-  assign(m, res, { logger }) {
+  assign(m, res, {
+    logger
+  }) {
     m.private.subscriptions = res;
     m.subscriptionsTs = m.versionTs;
-
     logger.info('Subscriptions ready');
   }
+
 };

@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 module.exports = {
   influx: require('./tasks/influx'),

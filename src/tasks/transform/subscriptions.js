@@ -7,9 +7,19 @@ const LRU = require('modern-lru')
 const moment = require('../../lib/moment-fn')
 const { registerHelpers } = require('../../lib/jsonata-utils')
 
-async function processItem (
+async function processItem(
   { data, dataObj, msgSeq },
-  { errorSubject, exprCache, logger, preprocessingExpr, pubSubject, stan, staticRules, subSubject }) {
+  {
+    errorSubject,
+    exprCache,
+    logger,
+    preprocessingExpr,
+    pubSubject,
+    stan,
+    staticRules,
+    subSubject
+  }
+) {
   try {
     /*
       Throttle re-processing of messages from error subject.
@@ -24,9 +34,13 @@ async function processItem (
      */
 
     const preRes = await new Promise((resolve, reject) => {
-      preprocessingExpr.evaluate(dataObj, {
-        env: () => ({ errorSubject, msgSeq, pubSubject, subSubject })
-      }, (err, res) => err ? reject(err) : resolve(res))
+      preprocessingExpr.evaluate(
+        dataObj,
+        {
+          env: () => ({ errorSubject, msgSeq, pubSubject, subSubject })
+        },
+        (err, res) => (err ? reject(err) : resolve(res))
+      )
     })
 
     if (!preRes) throw new Error('Preprocessing result undefined')
@@ -46,18 +60,23 @@ async function processItem (
     if (!Array.isArray(params.tags)) throw new Error('Invalid params.tags')
     const { tags: paramTags } = params
 
-    if (typeof params.time === 'undefined') throw new Error('Invalid params.time')
+    if (typeof params.time === 'undefined')
+      throw new Error('Invalid params.time')
     const paramTime = moment(params.time).utc()
-    if (!(paramTime && paramTime.isValid())) throw new Error('Invalid params.time format')
+    if (!(paramTime && paramTime.isValid()))
+      throw new Error('Invalid params.time format')
 
     /*
       Lookup static rules for transformation.
      */
 
     const matchedRules = staticRules.filter(rule => {
-      return rule.definition &&
-        rule.tags && rule.tags.every(tag => paramTags.includes(tag)) &&
+      return (
+        rule.definition &&
+        rule.tags &&
+        rule.tags.every(tag => paramTags.includes(tag)) &&
         paramTime.isBetween(rule.begins_at, rule.ends_before, null, '[)')
+      )
     })
 
     logger.info(`Processing (${matchedRules.length}) static rule(s)`)
@@ -66,7 +85,7 @@ async function processItem (
       Evaluate all transform expressions.
      */
 
-    for (let staticRule of matchedRules) {
+    for (const staticRule of matchedRules) {
       const { definition } = staticRule
 
       if (Array.isArray(definition.transform_expr)) {
@@ -87,9 +106,13 @@ async function processItem (
          */
 
         preRes.payload = await new Promise((resolve, reject) => {
-          expr.evaluate(preRes.payload, {
-            time: () => paramTime.clone()
-          }, (err, res) => err ? reject(err) : resolve(res))
+          expr.evaluate(
+            preRes.payload,
+            {
+              time: () => paramTime.clone()
+            },
+            (err, res) => (err ? reject(err) : resolve(res))
+          )
         })
       }
     }
@@ -108,26 +131,35 @@ async function processItem (
     })
 
     const guid = await new Promise((resolve, reject) => {
-      stan.publish(pubSubject, msgStr, (err, guid) => err ? reject(err) : resolve(guid))
+      stan.publish(pubSubject, msgStr, (err, guid) =>
+        err ? reject(err) : resolve(guid)
+      )
     })
 
     logger.info('Published', { msgSeq, subSubject, pubSubject, guid })
   } catch (err) {
-    if (errorSubject && (subSubject !== errorSubject)) {
+    if (errorSubject && subSubject !== errorSubject) {
       logger.error('Processing error', { msgSeq, subSubject, err, dataObj })
 
       const guid = await new Promise((resolve, reject) => {
-        stan.publish(errorSubject, data, (err, guid) => err ? reject(err) : resolve(guid))
+        stan.publish(errorSubject, data, (err, guid) =>
+          err ? reject(err) : resolve(guid)
+        )
       })
 
-      logger.info('Published to error subject', { msgSeq, subSubject, errorSubject, guid })
+      logger.info('Published to error subject', {
+        msgSeq,
+        subSubject,
+        errorSubject,
+        guid
+      })
     } else {
       throw err
     }
   }
 }
 
-function handleMessage (msg) {
+function handleMessage(msg) {
   const { logger, m, subSubject } = this
 
   if (!msg) {
@@ -148,25 +180,35 @@ function handleMessage (msg) {
     const data = msg.getData()
     const dataObj = JSON.parse(data)
 
-    processItem({ data, dataObj, msgSeq }, this).then(() => msg.ack()).catch(err => {
-      logger.error('Message processing error', { msgSeq, subSubject, err, dataObj })
-    })
+    processItem({ data, dataObj, msgSeq }, this)
+      .then(() => msg.ack())
+      .catch(err => {
+        logger.error('Message processing error', {
+          msgSeq,
+          subSubject,
+          err,
+          dataObj
+        })
+      })
   } catch (err) {
     logger.error('Message error', { msgSeq, subSubject, err })
   }
 }
 
 module.exports = {
-  guard (m) {
-    return !m.subscriptionsError &&
-      m.private.stan && m.stanConnected &&
-      (m.preprocessingExprsTs === m.versionTs) &&
-      (m.staticRulesTs === m.versionTs) &&
-      (m.subscriptionsTs !== m.versionTs) &&
+  guard(m) {
+    return (
+      !m.subscriptionsError &&
+      m.private.stan &&
+      m.stanConnected &&
+      m.preprocessingExprsTs === m.versionTs &&
+      m.staticRulesTs === m.versionTs &&
+      m.subscriptionsTs !== m.versionTs &&
       !m.private.subscriptions
+    )
   },
 
-  execute (m, { logger }) {
+  execute(m, { logger }) {
     const { preprocessingExprs, staticRules, stan } = m.private
     const subs = []
 
@@ -182,7 +224,10 @@ module.exports = {
       const preprocessingExpr = preprocessingExprs[sourceKey]
 
       if (!preprocessingExpr) {
-        logger.warn('Subscription skipped, no preprocessing expression found', { sourceKey, subSubject })
+        logger.warn('Subscription skipped, no preprocessing expression found', {
+          sourceKey,
+          subSubject
+        })
         return
       }
 
@@ -194,23 +239,31 @@ module.exports = {
         opts.setMaxInFlight(1)
 
         if (subOptions) {
-          if (typeof subOptions.ack_wait === 'number') opts.setAckWait(subOptions.ack_wait)
-          if (typeof subOptions.durable_name === 'string') opts.setDurableName(subOptions.durable_name)
+          if (typeof subOptions.ack_wait === 'number')
+            opts.setAckWait(subOptions.ack_wait)
+          if (typeof subOptions.durable_name === 'string')
+            opts.setDurableName(subOptions.durable_name)
         }
 
-        const sub = (typeof queueGroup === 'string') ? stan.subscribe(subSubject, queueGroup, opts) : stan.subscribe(subSubject, opts)
+        const sub =
+          typeof queueGroup === 'string'
+            ? stan.subscribe(subSubject, queueGroup, opts)
+            : stan.subscribe(subSubject, opts)
 
-        sub.on('message', handleMessage.bind({
-          errorSubject,
-          exprCache: new LRU(20), // TODO: Make configurable
-          logger,
-          m,
-          preprocessingExpr,
-          pubSubject,
-          stan,
-          staticRules,
-          subSubject
-        }))
+        sub.on(
+          'message',
+          handleMessage.bind({
+            errorSubject,
+            exprCache: new LRU(20), // TODO: Make configurable
+            logger,
+            m,
+            preprocessingExpr,
+            pubSubject,
+            stan,
+            staticRules,
+            subSubject
+          })
+        )
 
         subs.push(sub)
       } catch (err) {
@@ -221,7 +274,7 @@ module.exports = {
     return subs
   },
 
-  assign (m, res, { logger }) {
+  assign(m, res, { logger }) {
     m.private.subscriptions = res
     m.subscriptionsTs = m.versionTs
 

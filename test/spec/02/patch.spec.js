@@ -2,7 +2,7 @@
  * Tests for transform/patch tasks
  */
 
-describe('transform/patch tasks', function () {
+describe('transform/patch tasks', function() {
   this.timeout(60000)
 
   const now = new Date()
@@ -19,11 +19,11 @@ describe('transform/patch tasks', function () {
           error_subject: 'decodePseudoBinary.patch.err',
           preprocessing_expr: [
             /* eslint-disable quotes */
-            "($org := context.org_slug ~> $safeName;",
-            "$station := context.station ~> $safeName;",
-            "$table := context.table ~> $safeName;",
+            '($org := context.org_slug ~> $safeName;',
+            '$station := context.station ~> $safeName;',
+            '$table := context.table ~> $safeName;',
             "$tags := ['org' & '$' & $org, 'source$goes', 'station' & '$' & $station, 'table' & '$' & $table];",
-            "$time := payload.time;",
+            '$time := payload.time;',
             "$params := {'tags': $tags, 'time': $time};",
             "$ ~> |$|{'params': $params, 'payload': payload.body}|;)"
             /* eslint-enable quotes */
@@ -40,14 +40,14 @@ describe('transform/patch tasks', function () {
           error_subject: 'csi.patch.err',
           preprocessing_expr: [
             /* eslint-disable quotes */
-            "($org := context.org_slug ~> $safeName;",
-            "$station := payload.station ~> $safeName;",
-            "$table := payload.table ~> $safeName;",
+            '($org := context.org_slug ~> $safeName;',
+            '$station := payload.station ~> $safeName;',
+            '$table := payload.table ~> $safeName;',
             "$tags := ['org' & '$' & $org, 'source$csi', 'station' & '$' & $station, 'table' & '$' & $table];",
             "$time := payload.timeString & 'Z';",
             "$context := $merge([context, {'station': payload.station, 'table': payload.table}]);",
             "$params := {'tags': $tags, 'time': $time};",
-            "$payload := $reduce(payload.fields, function($p, $c){$merge([$p, {$safeName($c.name, false): $c.value}])}, {});",
+            '$payload := $reduce(payload.fields, function($p, $c){$merge([$p, {$safeName($c.name, false): $c.value}])}, {});',
             "$ ~> |$|{'context': $context, 'params': $params, 'payload': $payload}|;)"
             /* eslint-enable quotes */
           ],
@@ -68,23 +68,15 @@ describe('transform/patch tasks', function () {
             ]
           },
           ends_before: '2100-01-01T00:00:00.000Z',
-          tags: [
-            'org$ucnrs',
-            'source$csi',
-            'table$tenmin'
-          ]
+          tags: ['org$ucnrs', 'source$csi', 'table$tenmin']
         },
         {
           begins_at: '2000-01-01T00:00:00.000Z',
           definition: {
-            transform_expr: [
-              "$ ~> |$|{'Extra': time}|"
-            ]
+            transform_expr: ["$ ~> |$|{'Extra': time}|"]
           },
           ends_before: '2100-01-01T00:00:00.000Z',
-          tags: [
-            'org$ucnrs'
-          ]
+          tags: ['org$ucnrs']
         }
       ],
       created_at: now,
@@ -121,24 +113,26 @@ describe('transform/patch tasks', function () {
   let messages
   let sub
 
-  after(function () {
+  after(function() {
     return Promise.all([
-      model.private.stan ? new Promise((resolve, reject) => {
-        model.private.stan.removeAllListeners()
-        model.private.stan.once('close', resolve)
-        model.private.stan.once('error', reject)
-        model.private.stan.close()
-      }) : Promise.resolve()
+      model.private.stan
+        ? new Promise((resolve, reject) => {
+            model.private.stan.removeAllListeners()
+            model.private.stan.once('close', resolve)
+            model.private.stan.once('error', reject)
+            model.private.stan.close()
+          })
+        : Promise.resolve()
     ])
   })
 
-  it('should import', function () {
+  it('should import', function() {
     tasks = require('../../../dist').transform
 
     expect(tasks).to.have.property('sources')
   })
 
-  it('should create machine', function () {
+  it('should create machine', function() {
     machine = new tm.TaskMachine(model, tasks, {
       helpers: {
         logger: console
@@ -149,40 +143,51 @@ describe('transform/patch tasks', function () {
     expect(machine).to.have.property('model')
   })
 
-  it('should run', function () {
+  it('should run', function() {
     model.scratch = {}
 
-    return machine.clear().start().then(success => {
-      /* eslint-disable-next-line no-unused-expressions */
-      expect(success).to.be.true
+    return machine
+      .clear()
+      .start()
+      .then(success => {
+        /* eslint-disable-next-line no-unused-expressions */
+        expect(success).to.be.true
 
-      // Verify task state
-      expect(model).to.have.property('preprocessingExprsReady', true)
-      expect(model).to.have.property('sourcesReady', true)
-      expect(model).to.have.property('stanCheckReady', false)
-      expect(model).to.have.property('stanCloseReady', false)
-      expect(model).to.have.property('stanReady', true)
-      expect(model).to.have.property('staticRulesReady', true)
-      expect(model).to.have.property('subscriptionsReady', true)
-      expect(model).to.have.property('versionTsReady', false)
+        // Verify task state
+        expect(model).to.have.property('preprocessingExprsReady', true)
+        expect(model).to.have.property('sourcesReady', true)
+        expect(model).to.have.property('stanCheckReady', false)
+        expect(model).to.have.property('stanCloseReady', false)
+        expect(model).to.have.property('stanReady', true)
+        expect(model).to.have.property('staticRulesReady', true)
+        expect(model).to.have.property('subscriptionsReady', true)
+        expect(model).to.have.property('versionTsReady', false)
 
-      // Check for defaults
-      expect(model).to.have.nested.property('sources.decodePseudoBinary_patch_in.some_default', 'default')
-      expect(model).to.have.nested.property('sources.csi_patch_in.some_default', 'default')
-    })
+        // Check for defaults
+        expect(model).to.have.nested.property(
+          'sources.decodePseudoBinary_patch_in.some_default',
+          'default'
+        )
+        expect(model).to.have.nested.property(
+          'sources.csi_patch_in.some_default',
+          'default'
+        )
+      })
   })
 
-  it('should process csi data', function () {
+  it('should process csi data', function() {
     return helper.loadData(dataFileName.csiOut).then(data => {
       const msgStr = JSON.stringify(data)
 
       return new Promise((resolve, reject) => {
-        model.private.stan.publish('csi.patch.in', msgStr, (err, guid) => err ? reject(err) : resolve(guid))
+        model.private.stan.publish('csi.patch.in', msgStr, (err, guid) =>
+          err ? reject(err) : resolve(guid)
+        )
       })
     })
   })
 
-  it('should subscribe to patched messages', function () {
+  it('should subscribe to patched messages', function() {
     const opts = model.private.stan.subscriptionOptions()
     opts.setDeliverAllAvailable()
     opts.setDurableName('patch')
@@ -194,11 +199,11 @@ describe('transform/patch tasks', function () {
     })
   })
 
-  it('should wait for 5 seconds to collect messages', function () {
+  it('should wait for 5 seconds to collect messages', function() {
     return new Promise(resolve => setTimeout(resolve, 5000))
   })
 
-  it('should have patched messages', function () {
+  it('should have patched messages', function() {
     sub.removeAllListeners()
 
     expect(messages).to.have.lengthOf(1)
@@ -208,17 +213,21 @@ describe('transform/patch tasks', function () {
     expect(messages).to.not.have.nested.property('0.payload.Sta_ID')
   })
 
-  it('should process decoded data', function () {
+  it('should process decoded data', function() {
     return helper.loadData(dataFileName.decodePseudoBinaryOut).then(data => {
       const msgStr = JSON.stringify(data)
 
       return new Promise((resolve, reject) => {
-        model.private.stan.publish('decodePseudoBinary.patch.in', msgStr, (err, guid) => err ? reject(err) : resolve(guid))
+        model.private.stan.publish(
+          'decodePseudoBinary.patch.in',
+          msgStr,
+          (err, guid) => (err ? reject(err) : resolve(guid))
+        )
       })
     })
   })
 
-  it('should subscribe to patched messages', function () {
+  it('should subscribe to patched messages', function() {
     const opts = model.private.stan.subscriptionOptions()
     opts.setDeliverAllAvailable()
     opts.setDurableName('patch')
@@ -230,11 +239,11 @@ describe('transform/patch tasks', function () {
     })
   })
 
-  it('should wait for 5 seconds to collect messages', function () {
+  it('should wait for 5 seconds to collect messages', function() {
     return new Promise(resolve => setTimeout(resolve, 5000))
   })
 
-  it('should have patched messages', function () {
+  it('should have patched messages', function() {
     sub.removeAllListeners()
 
     expect(messages).to.have.lengthOf(1)

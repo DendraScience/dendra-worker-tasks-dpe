@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 /**
  * Worker tasks for archiving, transforming and loading data.
@@ -7,7 +7,6 @@
  * @license BSD-2-Clause-FreeBSD
  * @module dendra-worker-tasks-goes
  */
-
 // Named exports for convenience
 module.exports = {
   archive: require('./archive'),

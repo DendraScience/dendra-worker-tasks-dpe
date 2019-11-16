@@ -1,9 +1,8 @@
-'use strict';
+"use strict";
 
 /**
  * Prepare model rules if not defined, or when new state is detected.
  */
-
 const moment = require('../lib/moment-fn');
 
 module.exports = {
@@ -20,10 +19,12 @@ module.exports = {
     });
   },
 
-  assign(m, res, { logger }) {
+  assign(m, res, {
+    logger
+  }) {
     m.private.staticRules = res;
     m.staticRulesTs = m.versionTs;
-
     logger.info('Static rules ready');
   }
+
 };

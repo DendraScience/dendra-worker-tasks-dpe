@@ -2,7 +2,7 @@
  * Tests for archive tasks
  */
 
-describe('archive tasks', function () {
+describe('archive tasks', function() {
   this.timeout(60000)
 
   const now = new Date()
@@ -19,13 +19,13 @@ describe('archive tasks', function () {
           error_subject: 'csi.archive.err',
           preprocessing_expr: [
             /* eslint-disable quotes */
-            "($org := context.org_slug ~> $safeName;",
-            "$station := payload.station ~> $safeName;",
-            "$table := payload.table ~> $safeName;",
-            "$time := payload.timeString;",
+            '($org := context.org_slug ~> $safeName;',
+            '$station := payload.station ~> $safeName;',
+            '$table := payload.table ~> $safeName;',
+            '$time := payload.timeString;',
             "$recNum := $pad($string(payload.recordNumber), -10, '0');",
             "$docId := $join([$org, 'csi', $station, $table, $substring($time, 0, 10), $substring($time, 11, 2), $substring($time, 14, 2)], '-') & '_' & $recNum;",
-            "$valid := $contains($docId, /^\\w+-csi-\\w+-\\w+-\\d{4}-\\d{2}-\\d{2}-\\d{2}-\\d{2}_\\d{10}$/);",
+            '$valid := $contains($docId, /^\\w+-csi-\\w+-\\w+-\\d{4}-\\d{2}-\\d{2}-\\d{2}-\\d{2}_\\d{10}$/);',
             "$params := $valid ? {'document_id': $docId} : {};",
             "$ ~> |$|{'params': $params}|;)"
             /* eslint-enable quotes */
@@ -41,11 +41,11 @@ describe('archive tasks', function () {
           error_subject: 'goes.archive.err',
           preprocessing_expr: [
             /* eslint-disable quotes */
-            "($org := context.org_slug ~> $safeName;",
-            "$addr := payload.header.address ~> $safeName;",
-            "$time := payload.header.timeDate;",
+            '($org := context.org_slug ~> $safeName;',
+            '$addr := payload.header.address ~> $safeName;',
+            '$time := payload.header.timeDate;',
             "$docId := $join([$org, 'goes', $addr, $substring($time, 0, 10), $substring($time, 11, 2)], '-');",
-            "$valid := $contains($docId, /^\\w+-goes-\\w+-\\d{4}-\\d{2}-\\d{2}-\\d{2}$/);",
+            '$valid := $contains($docId, /^\\w+-goes-\\w+-\\d{4}-\\d{2}-\\d{2}-\\d{2}$/);',
             "$params := $valid ? {'document_id': $docId} : {};",
             "$ ~> |$|{'params': $params}|;)"
             /* eslint-enable quotes */
@@ -71,9 +71,11 @@ describe('archive tasks', function () {
     csi2: 'ucnrs-xyz-ucac_angelo-tenmin-2018-12-24-07-00_0000017829',
     goes: 'ucnrs-goes-bec025b0-2018-12-24-14'
   }
-  const documentService = main.app.get('connections').archiveStore.app.service('/documents')
+  const documentService = main.app
+    .get('connections')
+    .archiveStore.app.service('/documents')
 
-  const removeDocument = async (id) => {
+  const removeDocument = async id => {
     try {
       await documentService.remove(id)
     } catch (_) {}
@@ -106,30 +108,32 @@ describe('archive tasks', function () {
   let tasks
   let machine
 
-  before(async function () {
+  before(async function() {
     return cleanup()
   })
 
-  after(async function () {
+  after(async function() {
     await cleanup()
 
     await Promise.all([
-      model.private.stan ? new Promise((resolve, reject) => {
-        model.private.stan.removeAllListeners()
-        model.private.stan.once('close', resolve)
-        model.private.stan.once('error', reject)
-        model.private.stan.close()
-      }) : Promise.resolve()
+      model.private.stan
+        ? new Promise((resolve, reject) => {
+            model.private.stan.removeAllListeners()
+            model.private.stan.once('close', resolve)
+            model.private.stan.once('error', reject)
+            model.private.stan.close()
+          })
+        : Promise.resolve()
     ])
   })
 
-  it('should import', function () {
+  it('should import', function() {
     tasks = require('../../../dist').archive
 
     expect(tasks).to.have.property('sources')
   })
 
-  it('should create machine', function () {
+  it('should create machine', function() {
     machine = new tm.TaskMachine(model, tasks, {
       helpers: {
         logger: console
@@ -140,65 +144,84 @@ describe('archive tasks', function () {
     expect(machine).to.have.property('model')
   })
 
-  it('should run', function () {
+  it('should run', function() {
     model.scratch = {}
 
-    return machine.clear().start().then(success => {
-      /* eslint-disable-next-line no-unused-expressions */
-      expect(success).to.be.true
+    return machine
+      .clear()
+      .start()
+      .then(success => {
+        /* eslint-disable-next-line no-unused-expressions */
+        expect(success).to.be.true
 
-      // Verify task state
-      expect(model).to.have.property('preprocessingExprsReady', true)
-      expect(model).to.have.property('sourcesReady', true)
-      expect(model).to.have.property('stanCheckReady', false)
-      expect(model).to.have.property('stanCloseReady', false)
-      expect(model).to.have.property('stanReady', true)
-      expect(model).to.have.property('subscriptionsReady', true)
-      expect(model).to.have.property('versionTsReady', false)
+        // Verify task state
+        expect(model).to.have.property('preprocessingExprsReady', true)
+        expect(model).to.have.property('sourcesReady', true)
+        expect(model).to.have.property('stanCheckReady', false)
+        expect(model).to.have.property('stanCloseReady', false)
+        expect(model).to.have.property('stanReady', true)
+        expect(model).to.have.property('subscriptionsReady', true)
+        expect(model).to.have.property('versionTsReady', false)
 
-      // Check for defaults
-      expect(model).to.have.nested.property('sources.csi_archive_in.some_default', 'default')
-      expect(model).to.have.nested.property('sources.goes_archive_in.some_default', 'default')
-    })
+        // Check for defaults
+        expect(model).to.have.nested.property(
+          'sources.csi_archive_in.some_default',
+          'default'
+        )
+        expect(model).to.have.nested.property(
+          'sources.goes_archive_in.some_default',
+          'default'
+        )
+      })
   })
 
-  it('should process csi data', function () {
+  it('should process csi data', function() {
     return helper.loadData(dataFileName.csiOut).then(data => {
       const msgStr = JSON.stringify(data)
 
       return new Promise((resolve, reject) => {
-        model.private.stan.publish('csi.archive.in', msgStr, (err, guid) => err ? reject(err) : resolve(guid))
+        model.private.stan.publish('csi.archive.in', msgStr, (err, guid) =>
+          err ? reject(err) : resolve(guid)
+        )
       })
     })
   })
 
-  it('should process goes data', function () {
+  it('should process goes data', function() {
     return helper.loadData(dataFileName.goesOut).then(data => {
       const msgStr = JSON.stringify(data)
 
       return new Promise((resolve, reject) => {
-        model.private.stan.publish('goes.archive.in', msgStr, (err, guid) => err ? reject(err) : resolve(guid))
+        model.private.stan.publish('goes.archive.in', msgStr, (err, guid) =>
+          err ? reject(err) : resolve(guid)
+        )
       })
     })
   })
 
-  it('should wait for 5 seconds', function () {
+  it('should wait for 5 seconds', function() {
     return new Promise(resolve => setTimeout(resolve, 5000))
   })
 
-  it('should get archived csi document', function () {
+  it('should get archived csi document', function() {
     return documentService.get(documentId.csi1).then(doc => {
-      expect(doc).to.have.nested.property('content.payload.station', 'ucac_angelo')
+      expect(doc).to.have.nested.property(
+        'content.payload.station',
+        'ucac_angelo'
+      )
     })
   })
 
-  it('should get archived goes document', function () {
+  it('should get archived goes document', function() {
     return documentService.get(documentId.goes).then(doc => {
-      expect(doc).to.have.nested.property('content.payload.header.address', 'BEC025B0')
+      expect(doc).to.have.nested.property(
+        'content.payload.header.address',
+        'BEC025B0'
+      )
     })
   })
 
-  it('should reconfigure', function () {
+  it('should reconfigure', function() {
     const now = new Date()
 
     model.scratch = {}
@@ -213,13 +236,13 @@ describe('archive tasks', function () {
           error_subject: 'csi.archive.err',
           preprocessing_expr: [
             /* eslint-disable quotes */
-            "($org := context.org_slug ~> $safeName;",
-            "$station := payload.station ~> $safeName;",
-            "$table := payload.table ~> $safeName;",
-            "$time := payload.timeString;",
+            '($org := context.org_slug ~> $safeName;',
+            '$station := payload.station ~> $safeName;',
+            '$table := payload.table ~> $safeName;',
+            '$time := payload.timeString;',
             "$recNum := $pad($string(payload.recordNumber), -10, '0');",
             "$docId := $join([$org, 'xyz', $station, $table, $substring($time, 0, 10), $substring($time, 11, 2), $substring($time, 14, 2)], '-') & '_' & $recNum;",
-            "$valid := $contains($docId, /^\\w+-xyz-\\w+-\\w+-\\d{4}-\\d{2}-\\d{2}-\\d{2}-\\d{2}_\\d{10}$/);",
+            '$valid := $contains($docId, /^\\w+-xyz-\\w+-\\w+-\\d{4}-\\d{2}-\\d{2}-\\d{2}-\\d{2}_\\d{10}$/);',
             "$params := $valid ? {'document_id': $docId} : {};",
             "$ ~> |$|{'params': $params}|;)"
             /* eslint-enable quotes */
@@ -235,41 +258,52 @@ describe('archive tasks', function () {
       updated_at: now
     }
 
-    return machine.clear().start().then(success => {
-      /* eslint-disable-next-line no-unused-expressions */
-      expect(success).to.be.true
+    return machine
+      .clear()
+      .start()
+      .then(success => {
+        /* eslint-disable-next-line no-unused-expressions */
+        expect(success).to.be.true
 
-      // Verify task state
-      expect(model).to.have.property('preprocessingExprsReady', true)
-      expect(model).to.have.property('sourcesReady', true)
-      expect(model).to.have.property('stanCheckReady', true)
-      expect(model).to.have.property('stanCloseReady', true)
-      expect(model).to.have.property('stanReady', true)
-      expect(model).to.have.property('subscriptionsReady', true)
-      expect(model).to.have.property('versionTsReady', false)
+        // Verify task state
+        expect(model).to.have.property('preprocessingExprsReady', true)
+        expect(model).to.have.property('sourcesReady', true)
+        expect(model).to.have.property('stanCheckReady', true)
+        expect(model).to.have.property('stanCloseReady', true)
+        expect(model).to.have.property('stanReady', true)
+        expect(model).to.have.property('subscriptionsReady', true)
+        expect(model).to.have.property('versionTsReady', false)
 
-      // Check for defaults
-      expect(model).to.have.nested.property('sources.csi_archive_in.some_default', 'default')
-    })
+        // Check for defaults
+        expect(model).to.have.nested.property(
+          'sources.csi_archive_in.some_default',
+          'default'
+        )
+      })
   })
 
-  it('should process csi data', function () {
+  it('should process csi data', function() {
     return helper.loadData(dataFileName.csiOut).then(data => {
       const msgStr = JSON.stringify(data)
 
       return new Promise((resolve, reject) => {
-        model.private.stan.publish('csi.archive.in', msgStr, (err, guid) => err ? reject(err) : resolve(guid))
+        model.private.stan.publish('csi.archive.in', msgStr, (err, guid) =>
+          err ? reject(err) : resolve(guid)
+        )
       })
     })
   })
 
-  it('should wait for 5 seconds', function () {
+  it('should wait for 5 seconds', function() {
     return new Promise(resolve => setTimeout(resolve, 5000))
   })
 
-  it('should get archived csi document', function () {
+  it('should get archived csi document', function() {
     return documentService.get(documentId.csi2).then(doc => {
-      expect(doc).to.have.nested.property('content.payload.station', 'ucac_angelo')
+      expect(doc).to.have.nested.property(
+        'content.payload.station',
+        'ucac_angelo'
+      )
     })
   })
 })
