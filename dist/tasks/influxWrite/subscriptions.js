@@ -150,7 +150,7 @@ async function processItem({
      */
 
     const beforeLength = writer.points.length;
-    const writes = new Map();
+    const changes = new Map();
 
     for (let i = 0; i < points.length; i++) {
       const point = points[i];
@@ -161,21 +161,23 @@ async function processItem({
       const time = moment(point.time).utc();
       if (!(time && time.isValid())) throw new Error(`Invalid points[${i}].time format`);
       const timeValue = time.valueOf();
-      let write = writes.get(measurement);
+      let change = changes.get(measurement);
 
-      if (!write) {
-        write = {
+      if (!change) {
+        change = {
           measurement,
+          msgSeq,
           pointsCount: 0,
           timeMax: timeValue,
-          timeMin: timeValue
+          timeMin: timeValue,
+          type: 'write'
         };
-        writes.set(measurement, write);
+        changes.set(measurement, change);
       }
 
-      write.pointsCount++;
-      write.timeMax = Math.max(write.timeMax, timeValue);
-      write.timeMin = Math.min(write.timeMin, timeValue);
+      change.pointsCount++;
+      change.timeMax = Math.max(change.timeMax, timeValue);
+      change.timeMin = Math.min(change.timeMin, timeValue);
       point.timestamp = time.toDate();
       delete point.time;
       writer.points.push(point);
@@ -195,7 +197,7 @@ async function processItem({
         context: Object.assign({}, dataObj.context),
         payload: {
           options,
-          writes: [...writes.values()]
+          changes: [...changes.values()]
         }
       });
       const guid = await new Promise((resolve, reject) => {
