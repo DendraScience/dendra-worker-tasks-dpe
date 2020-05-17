@@ -3,15 +3,7 @@
 /**
  * Subscribe to subjects after preprocessing expressions are ready. Add an event listener for messages.
  */
-const jsonata = require('jsonata');
-
-const LRU = require('modern-lru');
-
 const moment = require('../../lib/moment-fn');
-
-const {
-  registerHelpers
-} = require('../../lib/jsonata-utils');
 
 async function processItem({
   data,
@@ -19,7 +11,6 @@ async function processItem({
   msgSeq
 }, {
   errorSubject,
-  exprCache,
   logger,
   preprocessingExpr,
   pubSubject,
@@ -81,7 +72,7 @@ async function processItem({
      */
 
     const matchedRules = staticRules.filter(rule => {
-      return rule.definition && rule.tags && rule.tags.every(tag => paramTags.includes(tag)) && paramTime.isBetween(rule.begins_at, rule.ends_before, null, '[)');
+      return rule.definition && rule.transformExpr && rule.tags && rule.tags.every(tag => paramTags.includes(tag)) && paramTime.isBetween(rule.begins_at, rule.ends_before, null, '[)');
     });
     logger.info(`Processing (${matchedRules.length}) static rule(s)`);
     /*
@@ -89,32 +80,11 @@ async function processItem({
      */
 
     for (const staticRule of matchedRules) {
-      const {
-        definition
-      } = staticRule;
-
-      if (Array.isArray(definition.transform_expr)) {
-        /*
-          Get cached expression, or create/cache an expression (optional).
-         */
-        let expr = exprCache.get(staticRule);
-
-        if (!expr) {
-          expr = jsonata(definition.transform_expr.join(' '));
-          registerHelpers(expr);
-          exprCache.set(staticRule, expr);
-        }
-        /*
-          Evaluate transform expression.
-         */
-
-
-        preRes.payload = await new Promise((resolve, reject) => {
-          expr.evaluate(preRes.payload, {
-            time: () => paramTime.clone()
-          }, (err, res) => err ? reject(err) : resolve(res));
-        });
-      }
+      preRes.payload = await new Promise((resolve, reject) => {
+        staticRule.transformExpr.evaluate(preRes.payload, {
+          time: () => paramTime.clone()
+        }, (err, res) => err ? reject(err) : resolve(res));
+      });
     }
 
     await new Promise(resolve => setImmediate(resolve));
@@ -259,8 +229,6 @@ module.exports = {
         const sub = typeof queueGroup === 'string' ? stan.subscribe(subSubject, queueGroup, opts) : stan.subscribe(subSubject, opts);
         sub.on('message', handleMessage.bind({
           errorSubject,
-          exprCache: new LRU(20),
-          // TODO: Make configurable
           logger,
           m,
           preprocessingExpr,

@@ -2,16 +2,11 @@
  * Subscribe to subjects after preprocessing expressions are ready. Add an event listener for messages.
  */
 
-const LRU = require('modern-lru')
 const moment = require('../../lib/moment-fn')
-const { Decoder } = require('@dendra-science/goes-pseudo-binary')
-const { MomentEditor } = require('@dendra-science/utils-moment')
 
 async function processItem(
   { data, dataObj, msgSeq },
   {
-    decoderCache,
-    editorCache,
     errorSubject,
     logger,
     preprocessingExpr,
@@ -74,7 +69,7 @@ async function processItem(
     const staticRule = staticRules.find(rule => {
       return (
         rule.definition &&
-        rule.definition.decode_format &&
+        rule.decoder &&
         rule.tags &&
         rule.tags.every(tag => paramTags.includes(tag)) &&
         paramTime.isBetween(rule.begins_at, rule.ends_before, null, '[)')
@@ -83,24 +78,12 @@ async function processItem(
 
     if (!staticRule) throw new Error('No static rule found')
 
-    /*
-      Get cached decoder, or create/cache a new decoder.
-     */
-
-    const { definition } = staticRule
+    const { decoder, definition, editor } = staticRule
     const {
       decode_columns: decodeCols,
       decode_slice: decodeSlice,
-      time_edit: timeEdit,
       time_interval: timeInterval
     } = definition
-
-    let decoder = decoderCache.get(staticRule)
-    if (!decoder) {
-      decoder = new Decoder(definition.decode_format)
-
-      decoderCache.set(staticRule, decoder)
-    }
 
     /*
       Slice and decode buffer.
@@ -116,16 +99,6 @@ async function processItem(
     if (!decodeRes) throw new Error('Decode result undefined')
     if (decodeRes.error) throw new Error(`Decode error: ${decodeRes.error}`)
     if (!decodeRes.rows) throw new Error('Decode rows undefined')
-
-    /*
-      Get cached Moment editor, or create/cache a new editor (optional).
-     */
-
-    let editor = editorCache.get(staticRule)
-    if (!editor && timeEdit) {
-      editor = new MomentEditor(timeEdit)
-      editorCache.set(staticRule, editor)
-    }
 
     /*
       Map/reduce rows to assign column names and time.
@@ -292,8 +265,6 @@ module.exports = {
         sub.on(
           'message',
           handleMessage.bind({
-            decoderCache: new LRU(20), // TODO: Make configurable
-            editorCache: new LRU(20), // TODO: Make configurable
             errorSubject,
             logger,
             m,
