@@ -159,7 +159,6 @@ describe('transform/patch tasks', function() {
         expect(model).to.have.property('stanCheckReady', false)
         expect(model).to.have.property('stanCloseReady', false)
         expect(model).to.have.property('stanReady', true)
-        expect(model).to.have.property('staticRulesReady', true)
         expect(model).to.have.property('subscriptionsReady', true)
         expect(model).to.have.property('versionTsReady', false)
 

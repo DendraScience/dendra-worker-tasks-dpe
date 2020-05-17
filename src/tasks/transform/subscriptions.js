@@ -3,6 +3,7 @@
  */
 
 const moment = require('../../lib/moment-fn')
+const { parseRules } = require('../../lib/static-rules')
 
 async function processItem(
   { data, dataObj, msgSeq },
@@ -179,14 +180,13 @@ module.exports = {
       m.private.stan &&
       m.stanConnected &&
       m.preprocessingExprsTs === m.versionTs &&
-      m.staticRulesTs === m.versionTs &&
       m.subscriptionsTs !== m.versionTs &&
       !m.private.subscriptions
     )
   },
 
   execute(m, { logger }) {
-    const { preprocessingExprs, staticRules, stan } = m.private
+    const { preprocessingExprs, stan } = m.private
     const subs = []
 
     m.sourceKeys.forEach(sourceKey => {
@@ -236,7 +236,7 @@ module.exports = {
             preprocessingExpr,
             pubSubject,
             stan,
-            staticRules,
+            staticRules: parseRules(m.state.static_rules || []),
             subSubject
           })
         )
