@@ -42,15 +42,23 @@ describe('transform/prep tasks', function() {
       ],
       static_rules: [
         {
-          begins_at: '2000-01-01T00:00:00.000Z',
+          begins_at: '1500-01-01T00:00:00.000Z',
           definition: {
-            transform_expr: [
-              "$ ~> |points|{'tags': {'month': $time().format('MM')}}|"
-            ]
+            transform_expr: []
           },
-          ends_before: '2100-01-01T00:00:00.000Z',
-          tags: ['xorg$ucnrs']
+          ends_before: '1600-01-01T00:00:00.000Z',
+          tags: []
         }
+        // {
+        //   begins_at: '2000-01-01T00:00:00.000Z',
+        //   definition: {
+        //     transform_expr: [
+        //       // "$ ~> |points|{'tags': {'month': $time().format('MM')}}|"
+        //     ]
+        //   },
+        //   ends_before: '2100-01-01T00:00:00.000Z',
+        //   tags: ['org$ucnrs']
+        // }
       ],
       created_at: now,
       updated_at: now

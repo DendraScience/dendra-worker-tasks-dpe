@@ -23,7 +23,10 @@ function parseRules(rules) {
       if (definition.time_edit)
         obj.editor = new MomentEditor(definition.time_edit)
 
-      if (Array.isArray(definition.transform_expr)) {
+      if (
+        Array.isArray(definition.transform_expr) &&
+        definition.transform_expr.length
+      ) {
         const expr = jsonata(definition.transform_expr.join(' '))
         registerHelpers(expr)
         obj.transformExpr = expr
