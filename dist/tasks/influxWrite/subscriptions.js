@@ -310,7 +310,7 @@ module.exports = {
       try {
         const opts = stan.subscriptionOptions();
         opts.setManualAckMode(true);
-        opts.setDeliverAllAvailable();
+        opts.setStartAtTimeDelta(0); // opts.setDeliverAllAvailable()
 
         if (subOptions) {
           if (typeof subOptions.ack_wait === 'number') opts.setAckWait(subOptions.ack_wait);
