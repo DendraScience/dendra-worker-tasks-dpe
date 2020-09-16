@@ -9,6 +9,7 @@ async function processItem(
   { data, dataObj, msgSeq },
   {
     errorSubject,
+    ignoreErrors,
     logger,
     preprocessingExpr,
     pubSubject,
@@ -131,6 +132,13 @@ async function processItem(
         errorSubject,
         guid
       })
+    } else if (ignoreErrors) {
+      logger.warn('Processing error (ignored)', {
+        msgSeq,
+        subSubject,
+        err,
+        dataObj
+      })
     } else {
       throw err
     }
@@ -193,6 +201,7 @@ module.exports = {
       const source = m.sources[sourceKey]
       const {
         error_subject: errorSubject,
+        ignore_errors: ignoreErrors,
         pub_to_subject: pubSubject,
         queue_group: queueGroup,
         sub_options: subOptions,
@@ -212,8 +221,11 @@ module.exports = {
         const opts = stan.subscriptionOptions()
 
         opts.setManualAckMode(true)
-        opts.setDeliverAllAvailable()
         opts.setMaxInFlight(1)
+
+        if (subOptions && typeof subOptions.start_at_time_delta === 'number')
+          opts.setStartAtTimeDelta(subOptions.start_at_time_delta)
+        else opts.setDeliverAllAvailable()
 
         if (subOptions) {
           if (typeof subOptions.ack_wait === 'number')
@@ -231,6 +243,7 @@ module.exports = {
           'message',
           handleMessage.bind({
             errorSubject,
+            ignoreErrors,
             logger,
             m,
             preprocessingExpr,
