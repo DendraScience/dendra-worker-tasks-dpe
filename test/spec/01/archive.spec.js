@@ -2,7 +2,7 @@
  * Tests for archive tasks
  */
 
-describe('archive tasks', function() {
+describe('archive tasks', function () {
   this.timeout(60000)
 
   const now = new Date()
@@ -108,11 +108,11 @@ describe('archive tasks', function() {
   let tasks
   let machine
 
-  before(async function() {
+  before(async function () {
     return cleanup()
   })
 
-  after(async function() {
+  after(async function () {
     await cleanup()
 
     await Promise.all([
@@ -127,13 +127,13 @@ describe('archive tasks', function() {
     ])
   })
 
-  it('should import', function() {
+  it('should import', function () {
     tasks = require('../../../dist').archive
 
     expect(tasks).to.have.property('sources')
   })
 
-  it('should create machine', function() {
+  it('should create machine', function () {
     machine = new tm.TaskMachine(model, tasks, {
       helpers: {
         logger: console
@@ -144,7 +144,7 @@ describe('archive tasks', function() {
     expect(machine).to.have.property('model')
   })
 
-  it('should run', function() {
+  it('should run', function () {
     model.scratch = {}
 
     return machine
@@ -175,7 +175,7 @@ describe('archive tasks', function() {
       })
   })
 
-  it('should process csi data', function() {
+  it('should process csi data', function () {
     return helper.loadData(dataFileName.csiOut).then(data => {
       const msgStr = JSON.stringify(data)
 
@@ -187,7 +187,7 @@ describe('archive tasks', function() {
     })
   })
 
-  it('should process goes data', function() {
+  it('should process goes data', function () {
     return helper.loadData(dataFileName.goesOut).then(data => {
       const msgStr = JSON.stringify(data)
 
@@ -199,11 +199,11 @@ describe('archive tasks', function() {
     })
   })
 
-  it('should wait for 5 seconds', function() {
+  it('should wait for 5 seconds', function () {
     return new Promise(resolve => setTimeout(resolve, 5000))
   })
 
-  it('should get archived csi document', function() {
+  it('should get archived csi document', function () {
     return documentService.get(documentId.csi1).then(doc => {
       expect(doc).to.have.nested.property(
         'content.payload.station',
@@ -212,7 +212,7 @@ describe('archive tasks', function() {
     })
   })
 
-  it('should get archived goes document', function() {
+  it('should get archived goes document', function () {
     return documentService.get(documentId.goes).then(doc => {
       expect(doc).to.have.nested.property(
         'content.payload.header.address',
@@ -221,7 +221,7 @@ describe('archive tasks', function() {
     })
   })
 
-  it('should reconfigure', function() {
+  it('should reconfigure', function () {
     const now = new Date()
 
     model.scratch = {}
@@ -282,7 +282,7 @@ describe('archive tasks', function() {
       })
   })
 
-  it('should process csi data', function() {
+  it('should process csi data', function () {
     return helper.loadData(dataFileName.csiOut).then(data => {
       const msgStr = JSON.stringify(data)
 
@@ -294,11 +294,11 @@ describe('archive tasks', function() {
     })
   })
 
-  it('should wait for 5 seconds', function() {
+  it('should wait for 5 seconds', function () {
     return new Promise(resolve => setTimeout(resolve, 5000))
   })
 
-  it('should get archived csi document', function() {
+  it('should get archived csi document', function () {
     return documentService.get(documentId.csi2).then(doc => {
       expect(doc).to.have.nested.property(
         'content.payload.station',

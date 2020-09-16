@@ -2,7 +2,7 @@
  * JSONata utilities.
  */
 
-const deleteKeys = function(obj, keys) {
+const deleteKeys = function (obj, keys) {
   const newObj = Object.assign({}, obj)
 
   keys.forEach(key => {
@@ -12,17 +12,18 @@ const deleteKeys = function(obj, keys) {
   return newObj
 }
 
-const deleteNulls = function(obj) {
+const deleteNulls = function (obj) {
   const newObj = {}
 
   Object.keys(obj).forEach(key => {
-    if (obj[key] !== null) newObj[key] = obj[key]
+    const val = obj[key]
+    if (val !== null && val !== '') newObj[key] = val
   })
 
   return newObj
 }
 
-const safeName = function(str, lc = true) {
+const safeName = function (str, lc = true) {
   return lc ? str.replace(/\W/g, '_').toLowerCase() : str.replace(/\W/g, '_')
 }
 

@@ -2,7 +2,7 @@
  * Tests for transform/patch tasks
  */
 
-describe('transform/patch tasks', function() {
+describe('transform/patch tasks', function () {
   this.timeout(60000)
 
   const now = new Date()
@@ -113,7 +113,7 @@ describe('transform/patch tasks', function() {
   let messages
   let sub
 
-  after(function() {
+  after(function () {
     return Promise.all([
       model.private.stan
         ? new Promise((resolve, reject) => {
@@ -126,13 +126,13 @@ describe('transform/patch tasks', function() {
     ])
   })
 
-  it('should import', function() {
+  it('should import', function () {
     tasks = require('../../../dist').transform
 
     expect(tasks).to.have.property('sources')
   })
 
-  it('should create machine', function() {
+  it('should create machine', function () {
     machine = new tm.TaskMachine(model, tasks, {
       helpers: {
         logger: console
@@ -143,7 +143,7 @@ describe('transform/patch tasks', function() {
     expect(machine).to.have.property('model')
   })
 
-  it('should run', function() {
+  it('should run', function () {
     model.scratch = {}
 
     return machine
@@ -174,7 +174,7 @@ describe('transform/patch tasks', function() {
       })
   })
 
-  it('should process csi data', function() {
+  it('should process csi data', function () {
     return helper.loadData(dataFileName.csiOut).then(data => {
       const msgStr = JSON.stringify(data)
 
@@ -186,7 +186,7 @@ describe('transform/patch tasks', function() {
     })
   })
 
-  it('should subscribe to patched messages', function() {
+  it('should subscribe to patched messages', function () {
     const opts = model.private.stan.subscriptionOptions()
     opts.setDeliverAllAvailable()
     opts.setDurableName('patch')
@@ -198,11 +198,11 @@ describe('transform/patch tasks', function() {
     })
   })
 
-  it('should wait for 5 seconds to collect messages', function() {
+  it('should wait for 5 seconds to collect messages', function () {
     return new Promise(resolve => setTimeout(resolve, 5000))
   })
 
-  it('should have patched messages', function() {
+  it('should have patched messages', function () {
     sub.removeAllListeners()
 
     expect(messages).to.have.lengthOf(1)
@@ -212,7 +212,7 @@ describe('transform/patch tasks', function() {
     expect(messages).to.not.have.nested.property('0.payload.Sta_ID')
   })
 
-  it('should process decoded data', function() {
+  it('should process decoded data', function () {
     return helper.loadData(dataFileName.decodePseudoBinaryOut).then(data => {
       const msgStr = JSON.stringify(data)
 
@@ -226,7 +226,7 @@ describe('transform/patch tasks', function() {
     })
   })
 
-  it('should subscribe to patched messages', function() {
+  it('should subscribe to patched messages', function () {
     const opts = model.private.stan.subscriptionOptions()
     opts.setDeliverAllAvailable()
     opts.setDurableName('patch')
@@ -238,11 +238,11 @@ describe('transform/patch tasks', function() {
     })
   })
 
-  it('should wait for 5 seconds to collect messages', function() {
+  it('should wait for 5 seconds to collect messages', function () {
     return new Promise(resolve => setTimeout(resolve, 5000))
   })
 
-  it('should have patched messages', function() {
+  it('should have patched messages', function () {
     sub.removeAllListeners()
 
     expect(messages).to.have.lengthOf(1)

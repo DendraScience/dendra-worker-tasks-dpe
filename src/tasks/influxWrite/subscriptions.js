@@ -30,7 +30,7 @@ class PointsWriter {
 
   static cached(key, ...opts) {
     let { cache } = this
-    if (!cache) cache = this.cache = new LRU(60) // TODO: Make configurable
+    if (!cache) cache = this.cache = new LRU(100) // TODO: Make configurable
 
     let writer = cache.get(key)
     if (!writer) {
@@ -103,6 +103,7 @@ async function processItem(
   {
     changeLogSubject,
     errorSubject,
+    ignoreErrors,
     influx,
     logger,
     pubSubject,
@@ -233,6 +234,13 @@ async function processItem(
         errorSubject,
         guid
       })
+    } else if (ignoreErrors) {
+      logger.warn('Processing error (ignored)', {
+        msgSeq,
+        subSubject,
+        err,
+        dataObj
+      })
     } else {
       throw err
     }
@@ -297,6 +305,7 @@ module.exports = {
       const {
         change_log_subject: changeLogSubject,
         error_subject: errorSubject,
+        ignore_errors: ignoreErrors,
         pub_to_subject: pubSubject,
         sub_options: subOptions,
         sub_to_subject: subSubject,
@@ -307,7 +316,10 @@ module.exports = {
         const opts = stan.subscriptionOptions()
 
         opts.setManualAckMode(true)
-        opts.setDeliverAllAvailable()
+
+        if (subOptions && typeof subOptions.start_at_time_delta === 'number')
+          opts.setStartAtTimeDelta(subOptions.start_at_time_delta)
+        else opts.setDeliverAllAvailable()
 
         if (subOptions) {
           if (typeof subOptions.ack_wait === 'number')
@@ -325,6 +337,7 @@ module.exports = {
           handleMessage.bind({
             changeLogSubject,
             errorSubject,
+            ignoreErrors,
             influx,
             logger,
             m,

@@ -2,7 +2,7 @@
  * Tests for influxWrite tasks
  */
 
-describe('influxWrite tasks', function() {
+describe('influxWrite tasks', function () {
   this.timeout(60000)
 
   const now = new Date()
@@ -62,7 +62,7 @@ describe('influxWrite tasks', function() {
   let tasks
   let machine
 
-  after(function() {
+  after(function () {
     return Promise.all([
       model.private.stan
         ? new Promise((resolve, reject) => {
@@ -75,13 +75,13 @@ describe('influxWrite tasks', function() {
     ])
   })
 
-  it('should import', function() {
+  it('should import', function () {
     tasks = require('../../../dist').influxWrite
 
     expect(tasks).to.have.property('sources')
   })
 
-  it('should create machine', function() {
+  it('should create machine', function () {
     machine = new tm.TaskMachine(model, tasks, {
       helpers: {
         logger: console
@@ -92,7 +92,7 @@ describe('influxWrite tasks', function() {
     expect(machine).to.have.property('model')
   })
 
-  it('should run', function() {
+  it('should run', function () {
     model.scratch = {}
 
     return machine
@@ -118,13 +118,13 @@ describe('influxWrite tasks', function() {
       })
   })
 
-  it('should drop csi database', function() {
+  it('should drop csi database', function () {
     return model.private.influx
       .dropDatabase('ucnrs__ucac_angelo')
       .catch(_ => {})
   })
 
-  it('should process csi data', function() {
+  it('should process csi data', function () {
     return helper.loadData(dataFileName.csiOut).then(data => {
       const msgStr = JSON.stringify(data)
 
@@ -136,11 +136,11 @@ describe('influxWrite tasks', function() {
     })
   })
 
-  it('should drop decoded database', function() {
+  it('should drop decoded database', function () {
     return model.private.influx.dropDatabase('ucnrs__ucbu_burns').catch(_ => {})
   })
 
-  it('should process decoded data', function() {
+  it('should process decoded data', function () {
     return helper.loadData(dataFileName.decodePseudoBinaryOut).then(data => {
       const msgStr = JSON.stringify(data)
 
@@ -152,11 +152,11 @@ describe('influxWrite tasks', function() {
     })
   })
 
-  it('should wait for 5 seconds to load points', function() {
+  it('should wait for 5 seconds to load points', function () {
     return new Promise(resolve => setTimeout(resolve, 5000))
   })
 
-  it('should have loaded csi points', function() {
+  it('should have loaded csi points', function () {
     return model.private.influx
       .query('select * from source_tenmin', {
         database: 'ucnrs__ucac_angelo'
@@ -176,7 +176,7 @@ describe('influxWrite tasks', function() {
       })
   })
 
-  it('should have loaded decoded points', function() {
+  it('should have loaded decoded points', function () {
     return model.private.influx
       .query('select * from source_goes_tenmin', {
         database: 'ucnrs__ucbu_burns'

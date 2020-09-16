@@ -14,7 +14,8 @@ const deleteKeys = function (obj, keys) {
 const deleteNulls = function (obj) {
   const newObj = {};
   Object.keys(obj).forEach(key => {
-    if (obj[key] !== null) newObj[key] = obj[key];
+    const val = obj[key];
+    if (val !== null && val !== '') newObj[key] = val;
   });
   return newObj;
 };

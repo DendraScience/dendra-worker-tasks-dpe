@@ -4,7 +4,7 @@
 
 const moment = require('moment')
 
-moment.fn.toMillis = function() {
+moment.fn.toMillis = function () {
   return this.valueOf()
 }
 
