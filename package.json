@@ -33,6 +33,7 @@
     "influx": "^5.6.3",
     "jsonata": "^1.8.3",
     "lodash.debounce": "^4.0.8",
+    "lodash.get": "^4.4.2",
     "modern-lru": "^1.4.0",
     "moment": "^2.28.0",
     "node-nats-streaming": "0.3.2"

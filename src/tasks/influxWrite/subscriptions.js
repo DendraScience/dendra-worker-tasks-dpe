@@ -7,6 +7,7 @@
 const LRU = require('modern-lru')
 const moment = require('../../lib/moment-fn')
 const debounce = require('lodash/debounce')
+const get = require('lodash/get')
 
 /**
  * Class for batch writing points to Influx.
@@ -106,6 +107,8 @@ async function processItem(
     ignoreErrors,
     influx,
     logger,
+    m,
+    metricsGroups,
     pubSubject,
     stan,
     subSubject,
@@ -195,6 +198,23 @@ async function processItem(
     })
 
     logger.info('Point(s) written', { msgSeq, subSubject })
+
+    /*
+      Update metrics (e.g. count).
+     */
+
+    if (m.metrics && metricsGroups) {
+      Object.keys(metricsGroups).forEach(group => {
+        const value = get(dataObj, metricsGroups[group])
+        if (value !== undefined) {
+          const key = `${group}_${value}`
+          let metric = m.metrics[key]
+          if (!metric) metric = m.metrics[key] = { count: 0, group, value }
+          metric.ts = new Date().getTime()
+          metric.count++
+        }
+      })
+    }
 
     if (changeLogSubject) {
       const msgStr = JSON.stringify({
@@ -306,6 +326,7 @@ module.exports = {
         change_log_subject: changeLogSubject,
         error_subject: errorSubject,
         ignore_errors: ignoreErrors,
+        metrics_groups: metricsGroups,
         pub_to_subject: pubSubject,
         sub_options: subOptions,
         sub_to_subject: subSubject,
@@ -341,6 +362,7 @@ module.exports = {
             influx,
             logger,
             m,
+            metricsGroups,
             pubSubject,
             stan,
             subSubject,
