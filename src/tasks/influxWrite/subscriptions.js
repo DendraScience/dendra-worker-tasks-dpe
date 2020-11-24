@@ -276,11 +276,24 @@ function handleMessage(msg) {
   }
 
   const msgSeq = msg.getSequence()
+  const msgTs = msg.getTimestamp()
 
-  logger.info('Message received', { msgSeq, subSubject })
+  logger.info('Message received', { msgSeq, msgTs, subSubject })
 
   if (m.subscriptionsTs !== m.versionTs) {
     logger.info('Message deferred', { msgSeq, subSubject })
+    return
+  }
+
+  const { ignoreBeforeDate } = this
+  if (ignoreBeforeDate && msgTs < ignoreBeforeDate) {
+    logger.info('Message ignored', {
+      msgSeq,
+      msgTs,
+      subSubject,
+      ignoreBeforeDate
+    })
+    msg.ack()
     return
   }
 
@@ -325,6 +338,7 @@ module.exports = {
       const {
         change_log_subject: changeLogSubject,
         error_subject: errorSubject,
+        ignore_before_date: ignoreBeforeDate,
         ignore_errors: ignoreErrors,
         metrics_groups: metricsGroups,
         pub_to_subject: pubSubject,
@@ -358,6 +372,7 @@ module.exports = {
           handleMessage.bind({
             changeLogSubject,
             errorSubject,
+            ignoreBeforeDate: ignoreBeforeDate && new Date(ignoreBeforeDate),
             ignoreErrors,
             influx,
             logger,
