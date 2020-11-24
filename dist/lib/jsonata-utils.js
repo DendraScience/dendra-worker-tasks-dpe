@@ -20,6 +20,17 @@ const deleteNulls = function (obj) {
   return newObj;
 };
 
+const mapValues = function* (obj, func) {
+  const newObj = {};
+  const keys = Object.keys(obj);
+
+  for (const key of keys) {
+    newObj[key] = yield* func.apply(this, [obj[key], key]);
+  }
+
+  return newObj;
+};
+
 const safeName = function (str, lc = true) {
   return lc ? str.replace(/\W/g, '_').toLowerCase() : str.replace(/\W/g, '_');
 };
@@ -31,6 +42,7 @@ const safeName = function (str, lc = true) {
 function registerHelpers(expr) {
   expr.registerFunction('deleteKeys', deleteKeys, '<oa<s>:o>');
   expr.registerFunction('deleteNulls', deleteNulls, '<o:o>');
+  expr.registerFunction('mapValues', mapValues, '<of:o>');
   expr.registerFunction('safeName', safeName, '<s,b?:s>');
 }
 

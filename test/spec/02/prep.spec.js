@@ -26,7 +26,7 @@ describe('transform/prep tasks', function () {
             '$time := payload.time;',
             "$params := {'tags': $tags, 'time': $time};",
             "$options := {'database': $org & '__' & $station, 'precision': 'ms'};",
-            "$fields := payload ~> $deleteNulls ~> $deleteKeys(['time']);",
+            "$fields := payload ~> $deleteNulls ~> $deleteKeys(['time']) ~> $mapValues(function($v, $k) { $contains($k, /_flag/i) ? $string($v) : $v });",
             "$points := [{'fields': $fields, 'measurement': 'source_' & $table, 'time': $time}];",
             "$payload := {'options': $options, 'points': $points};",
             "$ ~> |$|{'params': $params, 'payload': $payload}|;)"
@@ -204,6 +204,10 @@ describe('transform/prep tasks', function () {
     expect(messages).to.have.nested.property(
       '0.payload.points.0.fields.Day_of_Year',
       358
+    )
+    expect(messages).to.have.nested.property(
+      '0.payload.points.0.fields.Test_Flag',
+      '0'
     )
   })
 

@@ -62,6 +62,7 @@
     "mean_wind_vector_mag": 0.563,
     "mean_wind_vel": 0.796,
     "sd_wind_dir": 43.79,
+    "Test_Flag": 0,
     "time": 1545663600000
   }
 }
