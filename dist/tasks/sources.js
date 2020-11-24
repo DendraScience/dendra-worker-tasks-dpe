@@ -17,6 +17,7 @@ module.exports = {
 
         if (source.error_subject && !source.ignore_errors) {
           sources[`${sourceKey}$error`] = Object.assign({}, source, {
+            sub_options: Object.assign({}, source.sub_options, source.error_sub_options),
             sub_to_subject: source.error_subject
           });
         }
