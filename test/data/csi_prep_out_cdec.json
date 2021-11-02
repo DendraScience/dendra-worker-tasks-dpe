@@ -1,0 +1,41 @@
+{
+    "context":
+    {
+        "cdec_station_id": "MPG",
+        "imported_at": "2021-10-28T23:27:59.749Z",
+        "org_slug": "ucnrs"
+    },
+    "payload":
+    {
+        "options":
+        {
+            "path": "/MPG",
+            "webhook": "cdec"
+        },
+        "points":
+        [
+            ".A MPG 20211021 PS DH0900 /RV_SLRR_AV 0.001",
+            ".A MPG 20211021 PS DH0900 /RU_SLRR_MX 0.003",
+            ".A MPG 20211021 PS DH0900 /RM_SLRR_MN 0.001",
+            ".A MPG 20211021 PS DH0900 /UA_AVG_WS 0",
+            ".A MPG 20211021 PS DH0900 /UD_WIND_DR 0",
+            ".A MPG 20211021 PS DH0900 /UG_PEAK_WS 0",
+            ".A MPG 20211021 PS DH0900 /UN_MIN_WS 0",
+            ".A MPG 20211021 PS DH0900 /TX_TEMP_MX 18.36",
+            ".A MPG 20211021 PS DH0900 /TN_TEMP_MN 18.2",
+            ".A MPG 20211021 PS DH0900 /TA_TEMP_AV 18.22",
+            ".A MPG 20211021 PS DH0900 /XM_RELHMMX 46.78",
+            ".A MPG 20211021 PS DH0900 /XN_RELHMMN 45.64",
+            ".A MPG 20211021 PS DH0900 /XR_REL_HUM 46.33",
+            ".A MPG 20211021 PS DH0900 /PB_BARB_MX 814.9285",
+            ".A MPG 20211021 PS DH0900 /PO_BARP_MN 814.7839",
+            ".A MPG 20211021 PS DH0900 /PP_PPT_INC 0",
+            ".A MPG 20211021 PS DH0900 /PC_RAIN 0",
+            ".A MPG 20211021 PS DH0900 /TV_SOILT05 18.61",
+            ".A MPG 20211021 PS DH0900 /TV_SOILT10 18.51",
+            ".A MPG 20211021 PS DH0900 /TV_SOILT20 18.48",
+            ".A MPG 20211021 PS DH0900 /TV_SOILT50 18.65",
+            ".A MPG 20211021 PS DH0900 /VB_BAT_VOL 12.29"
+        ]
+    }
+}

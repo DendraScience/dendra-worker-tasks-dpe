@@ -15,7 +15,7 @@ module.exports = {
         const source = Object.assign({}, m.state.source_defaults, src);
         sources[sourceKey] = source;
 
-        if (source.error_subject && !source.ignore_errors) {
+        if (source.error_subject) {
           sources[`${sourceKey}$error`] = Object.assign({}, source, {
             sub_options: Object.assign({}, source.sub_options, source.error_sub_options),
             sub_to_subject: source.error_subject

@@ -2,68 +2,28 @@
  * Subscribe to subjects after preprocessing expressions are ready. Add an event listener for messages.
  */
 
-const moment = require('../../lib/moment-fn')
 const get = require('lodash.get')
-const { assertNoErrors } = require('influx/lib/src/results')
-const { escape } = require('influx/lib/src/grammar/escape')
 const { handleMessage, setSubOpts } = require('../../lib/sub')
 const { PointsWriter } = require('../../lib/points-writer')
 
 /**
- * Function for batch writing points to Influx.
+ * Function for batch writing points to webhook.
  */
 async function write() {
-  const { callbacks, influx, options, points } = this
+  const { callbacks, options, points, webhooks } = this
   this.points = []
   this.callbacks = []
 
-  let createDb
-  let stop
+  try {
+    this.logger.info(`Writing (${points.length}) point(s)`, this.options)
 
-  while (!stop) {
-    if (createDb) {
-      this.logger.info('Creating database', this.options)
+    const webhook =
+      (options.webhook && webhooks[options.webhook]) || webhooks.default
 
-      try {
-        // NOTE: Does NOT support shard options, need to use newer official client!
-        // await influx.createDatabase(options.database)
-
-        // HACK: Create database with shard duration specified (HARDCODED to 20 years)
-        await influx._pool
-          .json(
-            influx._getQueryOpts(
-              {
-                q: `create database ${escape.quoted(
-                  options.database
-                )} with duration inf shard duration 7300d name "autogen"`
-              },
-              'POST'
-            )
-          )
-          .then(assertNoErrors)
-          .then(() => undefined)
-      } catch (err) {
-        callbacks.forEach(cb => cb(err))
-        stop = true
-      }
-    }
-
-    try {
-      this.logger.info(`Writing (${points.length}) point(s)`, this.options)
-
-      await influx.writePoints(points, options)
-      callbacks.forEach(cb => cb())
-      stop = true
-    } catch (err) {
-      if (!createDb && err.res && err.res.statusCode === 404) {
-        this.logger.warn('Writing failed, database not found', this.options)
-
-        createDb = true
-      } else {
-        callbacks.forEach(cb => cb(err))
-        stop = true
-      }
-    }
+    await webhook({ data: points, url: options.path || '/' })
+    callbacks.forEach(cb => cb())
+  } catch (err) {
+    callbacks.forEach(cb => cb(err))
   }
 }
 
@@ -72,13 +32,13 @@ async function processItem(
   {
     errorSubject,
     ignoreErrorsAtRedelivery,
-    influx,
     logger,
     m,
     metricsGroups,
     pubSubject,
     stan,
     subSubject,
+    webhooks,
     writerOptions
   }
 ) {
@@ -92,19 +52,19 @@ async function processItem(
     const { options, points } = dataObj.payload
 
     if (typeof options !== 'object') throw new Error('Invalid payload.options')
-    if (!Array.isArray(points)) throw new Error('Invalid payload.points')
+    if (!Array.isArray(points)) throw new Error('Invalid payload.data')
 
     /*
       Get cached writer, or create/cache a writer.
      */
 
     const writer = PointsWriter.cached(
-      `${options.database}$${options.precision}$${options.retentionPolicy}`,
+      `${options.webhook}$${options.path}`,
       m.props && m.props.lruLimit,
       {
-        influx,
         logger,
         options,
+        webhooks,
         write
       },
       writerOptions
@@ -117,19 +77,7 @@ async function processItem(
     const beforeLength = writer.points.length
 
     for (let i = 0; i < points.length; i++) {
-      const point = points[i]
-      const { measurement } = point
-
-      if (!measurement || point.time === undefined) continue
-
-      const time = moment(point.time).utc()
-      if (!(time && time.isValid()))
-        throw new Error(`Invalid points[${i}].time format`)
-
-      point.timestamp = time.toDate()
-      delete point.time
-
-      writer.points.push(point)
+      writer.points.push(points[i])
     }
 
     logger.info(`Pushed (${writer.points.length - beforeLength}) point(s)`)
@@ -193,7 +141,7 @@ module.exports = {
       !m.subscriptionsError &&
       m.private.stan &&
       m.stanConnected &&
-      m.private.influx &&
+      m.private.webhooks &&
       m.sourcesTs === m.versionTs &&
       m.subscriptionsTs !== m.versionTs &&
       !m.private.subscriptions
@@ -201,7 +149,7 @@ module.exports = {
   },
 
   execute(m, { logger }) {
-    const { influx, stan } = m.private
+    const { stan, webhooks } = m.private
     const subs = []
 
     m.sourceKeys.forEach(sourceKey => {
@@ -235,7 +183,6 @@ module.exports = {
                 : ignoreErrors === true
                 ? 0
                 : undefined,
-            influx,
             logger,
             m,
             metricsGroups,
@@ -243,6 +190,7 @@ module.exports = {
             pubSubject,
             stan,
             subSubject,
+            webhooks,
             writerOptions:
               subSubject === errorSubject
                 ? Object.assign({}, writerOptions, errorWriterOptions)

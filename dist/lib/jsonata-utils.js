@@ -1,10 +1,5 @@
 "use strict";
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.registerHelpers = registerHelpers;
-
 /**
  * JSONata utilities.
  */
@@ -96,4 +91,6 @@ function registerHelpers(expr) {
   expr.registerFunction('safeName', safeName, '<s,b?:s>');
 }
 
-exports.registerHelpers = registerHelpers;
+module.exports = {
+  registerHelpers
+};

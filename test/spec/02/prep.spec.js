@@ -32,7 +32,7 @@ describe('transform/prep tasks', function () {
             "$ ~> |$|{'params': $params, 'payload': $payload}|;)"
             /* eslint-enable quotes */
           ],
-          pub_to_subject: 'prep.out',
+          pub_to_subject: 'prep.out.' + main.ts,
           sub_options: {
             ack_wait: 10000,
             durable_name: 'prep'
@@ -168,7 +168,7 @@ describe('transform/prep tasks', function () {
     opts.setDeliverAllAvailable()
     opts.setDurableName('prep`')
 
-    sub = model.private.stan.subscribe('prep.out', opts)
+    sub = model.private.stan.subscribe('prep.out.' + main.ts, opts)
     messages = []
     sub.on('message', msg => {
       messages.push(JSON.parse(msg.getData()))

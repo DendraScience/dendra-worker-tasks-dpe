@@ -1,6 +1,6 @@
 {
   "name": "@dendra-science/worker-tasks-dpe",
-  "version": "2.6.0",
+  "version": "2.8.0",
   "description": "Worker tasks for archiving, transforming and loading data.",
   "license": "BSD-2-Clause-FreeBSD",
   "author": "J. Scott Smith <scott@newleafsolutionsinc.com>",
@@ -29,9 +29,10 @@
     "@dendra-science/utils-moment": "2.5.0",
     "@feathersjs/feathers": "^4.5.11",
     "@feathersjs/rest-client": "^4.5.11",
-    "axios": "^0.21.1",
-    "influx": "^5.8.0",
-    "jsonata": "^1.8.4",
+    "agentkeepalive": "^4.1.4",
+    "axios": "^0.24.0",
+    "influx": "^5.9.2",
+    "jsonata": "^1.8.5",
     "lodash.debounce": "^4.0.8",
     "lodash.get": "^4.4.2",
     "modern-lru": "^1.4.0",
@@ -39,20 +40,20 @@
     "node-nats-streaming": "0.3.2"
   },
   "devDependencies": {
-    "@babel/cli": "^7.13.14",
-    "@babel/core": "^7.13.14",
-    "@babel/preset-env": "^7.13.12",
+    "@babel/cli": "^7.16.0",
+    "@babel/core": "^7.16.0",
+    "@babel/preset-env": "^7.16.0",
     "chai": "^4.3.4",
-    "eslint": "^7.23.0",
-    "eslint-config-prettier": "^8.1.0",
-    "eslint-config-standard": "^16.0.2",
-    "eslint-plugin-import": "^2.22.1",
+    "eslint": "^7.32.0",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-config-standard": "^16.0.3",
+    "eslint-plugin-import": "^2.25.2",
     "eslint-plugin-node": "^11.1.0",
-    "eslint-plugin-prettier": "^3.3.1",
-    "eslint-plugin-promise": "^4.3.1",
+    "eslint-plugin-prettier": "^4.0.0",
+    "eslint-plugin-promise": "^5.1.1",
     "eslint-plugin-standard": "^5.0.0",
-    "mocha": "^8.3.2",
-    "prettier": "^2.2.1"
+    "mocha": "^9.1.3",
+    "prettier": "^2.4.1"
   },
   "optionalDependencies": {}
 }

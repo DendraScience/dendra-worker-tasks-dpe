@@ -28,7 +28,7 @@ describe('decodePseudoBinary tasks', function () {
             "$ ~> |$|{'params': $params, 'payload': payload.body}|;)"
             /* eslint-enable quotes */
           ],
-          pub_to_subject: 'goes.decodePseudoBinary.out',
+          pub_to_subject: 'goes.decodePseudoBinary.out.' + main.ts,
           sub_options: {
             ack_wait: 10000,
             durable_name: 'decodePseudoBinary'
@@ -187,7 +187,10 @@ describe('decodePseudoBinary tasks', function () {
     opts.setDeliverAllAvailable()
     opts.setDurableName('decodePseudoBinary')
 
-    sub = model.private.stan.subscribe('goes.decodePseudoBinary.out', opts)
+    sub = model.private.stan.subscribe(
+      'goes.decodePseudoBinary.out.' + main.ts,
+      opts
+    )
     messages = []
     sub.on('message', msg => {
       messages.push(JSON.parse(msg.getData()))
@@ -229,7 +232,7 @@ describe('decodePseudoBinary tasks', function () {
             "$ ~> |$|{'params': $params, 'payload': payload.body}|;)"
             /* eslint-enable quotes */
           ],
-          pub_to_subject: 'goes.decodePseudoBinary.out',
+          pub_to_subject: 'goes.decodePseudoBinary.out.' + main.ts,
           sub_options: {
             ack_wait: 10000,
             durable_name: 'decodePseudoBinary'
@@ -326,7 +329,10 @@ describe('decodePseudoBinary tasks', function () {
     opts.setDeliverAllAvailable()
     opts.setDurableName('decodePseudoBinary')
 
-    sub = model.private.stan.subscribe('goes.decodePseudoBinary.out', opts)
+    sub = model.private.stan.subscribe(
+      'goes.decodePseudoBinary.out.' + main.ts,
+      opts
+    )
     messages = []
     sub.on('message', msg => {
       messages.push(JSON.parse(msg.getData()))

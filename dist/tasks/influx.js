@@ -3,8 +3,23 @@
 /**
  * Create an InfluxDB client if not defined.
  */
+const Agent = require('agentkeepalive');
+
+const {
+  HttpsAgent
+} = require('agentkeepalive');
+
 const Influx = require('influx');
 
+function agentOptions() {
+  return {
+    timeout: 60000,
+    freeSocketTimeout: 30000
+  };
+}
+
+const httpAgent = new Agent(agentOptions());
+const httpsAgent = new HttpsAgent(agentOptions());
 module.exports = {
   guard(m) {
     return !m.influxError && !m.private.influx;
@@ -14,7 +29,12 @@ module.exports = {
     logger
   }) {
     const cfg = m.$app.get('clients').influx;
-    const influx = new Influx.InfluxDB(cfg);
+    const options = Object.assign({}, cfg.options, {
+      agent: cfg.protocol === 'https' ? httpsAgent : httpAgent
+    });
+    const influx = new Influx.InfluxDB(Object.assign({}, cfg, {
+      options
+    }));
     logger.info('Influx pinging hosts');
     return influx.ping(5000).then(hosts => ({
       hosts,

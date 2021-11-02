@@ -28,7 +28,7 @@ describe('transform/patch tasks', function () {
             "$ ~> |$|{'params': $params, 'payload': payload.body}|;)"
             /* eslint-enable quotes */
           ],
-          pub_to_subject: 'decodePseudoBinary.patch.out',
+          pub_to_subject: 'decodePseudoBinary.patch.out.' + main.ts,
           sub_options: {
             ack_wait: 10000,
             durable_name: 'patch'
@@ -51,7 +51,7 @@ describe('transform/patch tasks', function () {
             "$ ~> |$|{'context': $context, 'params': $params, 'payload': $payload}|;)"
             /* eslint-enable quotes */
           ],
-          pub_to_subject: 'csi.patch.out',
+          pub_to_subject: 'csi.patch.out.' + main.ts,
           sub_options: {
             ack_wait: 10000,
             durable_name: 'patch'
@@ -191,7 +191,7 @@ describe('transform/patch tasks', function () {
     opts.setDeliverAllAvailable()
     opts.setDurableName('patch')
 
-    sub = model.private.stan.subscribe('csi.patch.out', opts)
+    sub = model.private.stan.subscribe('csi.patch.out.' + main.ts, opts)
     messages = []
     sub.on('message', msg => {
       messages.push(JSON.parse(msg.getData()))
@@ -231,7 +231,10 @@ describe('transform/patch tasks', function () {
     opts.setDeliverAllAvailable()
     opts.setDurableName('patch')
 
-    sub = model.private.stan.subscribe('decodePseudoBinary.patch.out', opts)
+    sub = model.private.stan.subscribe(
+      'decodePseudoBinary.patch.out.' + main.ts,
+      opts
+    )
     messages = []
     sub.on('message', msg => {
       messages.push(JSON.parse(msg.getData()))

@@ -44,4 +44,6 @@ function parseRules(rules) {
   });
 }
 
-exports.parseRules = parseRules;
+module.exports = {
+  parseRules
+};

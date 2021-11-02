@@ -34,16 +34,31 @@ app.set('connections', {
 
 app.set('clients', {
   influx: {
-    database: 'dendra_dpe_test'
+    database: 'dendra_dpe_test',
+    host: '192.168.1.60',
+    port: 31186
     // host: 'localhost',
     // port: 8086
   },
   stan: {
     client: 'test-dpe-{key}',
-    cluster: 'test-cluster',
+    cluster: 'stan-cluster',
     opts: {
-      uri: 'http://localhost:4222'
+      uri: 'http://192.168.1.60:31242'
+      // uri: 'http://localhost:4222'
     }
+  },
+  // Requires webhook running:
+  // node ./dist/generic-webhook-sftp-upload.js --sftp_host=192.168.1.60 --sftp_port=30122 --sftp_username=foo --sftp_password=123 --secret=abc
+  webhooks: {
+    cdec: {
+      baseURL: 'http://127.0.0.1:3000',
+      headers: {
+        Authorization: 'abc'
+      },
+      method: 'POST'
+    }
+    // default: {}
   }
 })
 
@@ -54,6 +69,7 @@ global.helper = {
   loadJSON
 }
 global.main = {
-  app
+  app,
+  ts: Date.now()
 }
 global.tm = tm

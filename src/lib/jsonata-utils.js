@@ -80,7 +80,7 @@ const safeName = function (str, lc = true) {
 /**
  * Register a set of standard helper functions.
  */
-export function registerHelpers(expr) {
+function registerHelpers(expr) {
   expr.registerFunction('bitAnd', bitAnd, '<nn:n>')
   expr.registerFunction('bitOr', bitOr, '<nn:n>')
   expr.registerFunction('bitXor', bitXor, '<nn:n>')
@@ -96,4 +96,6 @@ export function registerHelpers(expr) {
   expr.registerFunction('safeName', safeName, '<s,b?:s>')
 }
 
-exports.registerHelpers = registerHelpers
+module.exports = {
+  registerHelpers
+}

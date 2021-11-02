@@ -9,12 +9,19 @@ const {
   parseRules
 } = require('../../lib/static-rules');
 
+const {
+  handleMessage,
+  setSubOpts
+} = require('../../lib/sub');
+
 async function processItem({
   data,
   dataObj,
+  msgRc,
   msgSeq
 }, {
   errorSubject,
+  ignoreErrorsAtRedelivery,
   logger,
   preprocessingExpr,
   pubSubject,
@@ -23,13 +30,6 @@ async function processItem({
   subSubject
 }) {
   try {
-    /*
-      Throttle re-processing of messages from error subject.
-     */
-    // if (subSubject === errorSubject) {
-    //   await new Promise(resolve => setTimeout(resolve, 1000))
-    // }
-
     /*
       Preprocess inbound message data.
      */
@@ -158,59 +158,18 @@ async function processItem({
         errorSubject,
         guid
       });
-    } else {
-      throw err;
-    }
-  }
-}
-
-function handleMessage(msg) {
-  const {
-    logger,
-    m,
-    subSubject
-  } = this;
-
-  if (!msg) {
-    logger.error('Message undefined');
-    return;
-  }
-
-  const msgSeq = msg.getSequence();
-  logger.info('Message received', {
-    msgSeq,
-    subSubject
-  });
-
-  if (m.subscriptionsTs !== m.versionTs) {
-    logger.info('Message deferred', {
-      msgSeq,
-      subSubject
-    });
-    return;
-  }
-
-  try {
-    const data = msg.getData();
-    const dataObj = JSON.parse(data);
-    processItem({
-      data,
-      dataObj,
-      msgSeq
-    }, this).then(() => msg.ack()).catch(err => {
-      logger.error('Message processing error', {
+    } else if (msgRc >= ignoreErrorsAtRedelivery) {
+      logger.warn('Processing error (ignored)', {
+        msgRc,
         msgSeq,
         subSubject,
+        ignoreErrorsAtRedelivery,
         err,
         dataObj
       });
-    });
-  } catch (err) {
-    logger.error('Message error', {
-      msgSeq,
-      subSubject,
-      err
-    });
+    } else {
+      throw err;
+    }
   }
 }
 
@@ -231,6 +190,9 @@ module.exports = {
       const source = m.sources[sourceKey];
       const {
         error_subject: errorSubject,
+        ignore_before_date: ignoreBeforeDate,
+        ignore_errors: ignoreErrors,
+        ignore_errors_at_redelivery: ignoreErrorsAtRedelivery,
         pub_to_subject: pubSubject,
         queue_group: queueGroup,
         sub_options: subOptions,
@@ -247,22 +209,17 @@ module.exports = {
       }
 
       try {
-        const opts = stan.subscriptionOptions();
-        opts.setManualAckMode(true);
-        opts.setDeliverAllAvailable();
+        const opts = setSubOpts(stan.subscriptionOptions(), subOptions);
         opts.setMaxInFlight(1);
-
-        if (subOptions) {
-          if (typeof subOptions.ack_wait === 'number') opts.setAckWait(subOptions.ack_wait);
-          if (typeof subOptions.durable_name === 'string') opts.setDurableName(subOptions.durable_name);
-        }
-
         const sub = typeof queueGroup === 'string' ? stan.subscribe(subSubject, queueGroup, opts) : stan.subscribe(subSubject, opts);
         sub.on('message', handleMessage.bind({
           errorSubject,
+          ignoreBeforeDate: ignoreBeforeDate && new Date(ignoreBeforeDate),
+          ignoreErrorsAtRedelivery: typeof ignoreErrorsAtRedelivery === 'number' ? ignoreErrorsAtRedelivery : ignoreErrors === true ? 0 : undefined,
           logger,
           m,
           preprocessingExpr,
+          processItem,
           pubSubject,
           stan,
           staticRules: parseRules(m.state.static_rules || []),
