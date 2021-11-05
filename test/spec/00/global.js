@@ -35,6 +35,7 @@ app.set('connections', {
 app.set('clients', {
   influx: {
     database: 'dendra_dpe_test',
+    // Bonsai test server at home
     host: '192.168.1.60',
     port: 31186
     // host: 'localhost',
@@ -44,6 +45,7 @@ app.set('clients', {
     client: 'test-dpe-{key}',
     cluster: 'stan-cluster',
     opts: {
+      // Bonsai test server at home
       uri: 'http://192.168.1.60:31242'
       // uri: 'http://localhost:4222'
     }

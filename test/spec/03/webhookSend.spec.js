@@ -133,24 +133,4 @@ describe('webhookSend tasks', function () {
   it('should wait for 5 seconds to load points', function () {
     return new Promise(resolve => setTimeout(resolve, 5000))
   })
-
-  // it('should have loaded csi points', function () {
-  //   return model.private.influx
-  //     .query('select * from source_tenmin', {
-  //       database: 'ucnrs__ucac_angelo'
-  //     })
-  //     .then(results => {
-  //       expect(results).to.have.lengthOf(2)
-
-  //       expect(results).to.have.nested.property('0.time')
-  //       expect(results[0].time.getTime()).to.equal(1545660000000)
-  //       expect(results).to.have.nested.property('0.Extra', 1545660000000)
-  //       expect(results).to.have.nested.property('0.Day_of_Year', 358)
-
-  //       expect(results).to.have.nested.property('1.time')
-  //       expect(results[1].time.getTime()).to.equal(1545663600000)
-  //       expect(results).to.have.nested.property('1.Extra', 1545663600000)
-  //       expect(results).to.have.nested.property('1.Day_of_Year', 358)
-  //     })
-  // })
 })
