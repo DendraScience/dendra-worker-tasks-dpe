@@ -41,6 +41,12 @@ app.set('clients', {
     // host: 'localhost',
     // port: 8086
   },
+  influx2: {
+    // CUAHSI-Dendra dev instance1
+    org: 'p-org',
+    token: process.env.INFLUX2_TOKEN,
+    url: 'http://10.0.250.1:32086'
+  },
   stan: {
     client: 'test-dpe-{key}',
     cluster: 'stan-cluster',

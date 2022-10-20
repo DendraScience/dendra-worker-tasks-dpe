@@ -6,14 +6,18 @@
 const moment = require('../../lib/moment-fn');
 
 const get = require('lodash.get');
+/* eslint-disable-next-line camelcase */
+
 
 const {
-  assertNoErrors
-} = require('influx/lib/src/results');
+  DEFAULT_WriteOptions,
+  Point
+} = require('@influxdata/influxdb-client');
 
 const {
-  escape
-} = require('influx/lib/src/grammar/escape');
+  BucketsAPI,
+  OrgsAPI
+} = require('@influxdata/influxdb-client-apis');
 
 const {
   handleMessage,
@@ -31,9 +35,32 @@ const {
 async function write() {
   const {
     callbacks,
-    influx,
-    options,
-    points
+    influx2,
+    options
+  } = this;
+
+  try {
+    if (!this.bucketsAPI) this.bucketsAPI = new BucketsAPI(influx2.influxDB);
+    if (!this.orgsAPI) this.orgsAPI = new OrgsAPI(influx2.influxDB);
+    if (!this.writeApi) this.writeApi = influx2.influxDB.getWriteApi(influx2.org, options.database, options.precision || 'ms', {
+      // SEE: https://influxdata.github.io/influxdb-client-js/influxdb-client.writeoptions.html
+      // SEE: https://influxdata.github.io/influxdb-client-js/influxdb-client.writeretryoptions.html
+
+      /* eslint-disable-next-line camelcase */
+      batchSize: DEFAULT_WriteOptions.batchSize + 1,
+      flushInterval: 0,
+      maxBufferLines: 30000,
+      maxRetries: 0
+    });
+  } catch (err) {
+    callbacks.forEach(cb => cb(err));
+  }
+
+  const {
+    bucketsAPI,
+    orgsAPI,
+    points,
+    writeApi
   } = this;
   this.points = [];
   this.callbacks = [];
@@ -45,12 +72,23 @@ async function write() {
       this.logger.info('Creating database', this.options);
 
       try {
-        // NOTE: Does NOT support shard options, need to use newer official client!
-        // await influx.createDatabase(options.database)
-        // HACK: Create database with shard duration specified (HARDCODED to 20 years)
-        await influx._pool.json(influx._getQueryOpts({
-          q: `create database ${escape.quoted(options.database)} with duration inf shard duration 7300d name "autogen"`
-        }, 'POST')).then(assertNoErrors).then(() => undefined);
+        const organizations = await orgsAPI.getOrgs({
+          org: influx2.org
+        });
+        if (!organizations.orgs.length) throw new Error('Organization not found'); // Create database with shard duration specified (HARDCODED to 20 years)
+
+        await bucketsAPI.postBuckets({
+          body: {
+            name: options.database,
+            orgID: organizations.orgs[0].id,
+            retentionRules: [{
+              everySeconds: 0,
+              shardGroupDurationsSeconds: 24 * 60 * 60 * 7300,
+              type: 'expire'
+            }],
+            rp: 'autogen'
+          }
+        });
       } catch (err) {
         callbacks.forEach(cb => cb(err));
         stop = true;
@@ -59,11 +97,12 @@ async function write() {
 
     try {
       this.logger.info(`Writing (${points.length}) point(s)`, this.options);
-      await influx.writePoints(points, options);
+      writeApi.writePoints(points);
+      await writeApi.flush();
       callbacks.forEach(cb => cb());
       stop = true;
     } catch (err) {
-      if (!createDb && err.res && err.res.statusCode === 404) {
+      if (!createDb && err.statusCode === 404) {
         this.logger.warn('Writing failed, database not found', this.options);
         createDb = true;
       } else {
@@ -82,7 +121,7 @@ async function processItem({
 }, {
   errorSubject,
   ignoreErrorsAtRedelivery,
-  influx,
+  influx2,
   logger,
   m,
   metricsGroups,
@@ -106,8 +145,8 @@ async function processItem({
       Get cached writer, or create/cache a writer.
      */
 
-    const writer = PointsWriter.cached(`v1$${options.database}$${options.precision}$${options.retentionPolicy}`, m.props && m.props.lruLimit, {
-      influx,
+    const writer = PointsWriter.cached(`${options.database}$${options.precision}$${options.retentionPolicy}`, m.props && m.props.lruLimit, {
+      influx2,
       logger,
       options,
       write
@@ -126,9 +165,27 @@ async function processItem({
       if (!measurement || point.time === undefined) continue;
       const time = moment(point.time).utc();
       if (!(time && time.isValid())) throw new Error(`Invalid points[${i}].time format`);
-      point.timestamp = time.toDate();
-      delete point.time;
-      writer.points.push(point);
+      const pt = new Point(measurement);
+      pt.timestamp(time.toDate());
+      if (typeof point.tags === 'object') for (const [k, v] of Object.entries(point.tags)) {
+        if (k && v) pt.tag(k, v + '');
+      }
+      if (typeof point.fields === 'object') for (const [k, v] of Object.entries(point.fields)) {
+        if (k) switch (typeof v) {
+          case 'boolean':
+            pt.booleanField(k, v);
+            break;
+
+          case 'number':
+            pt.floatField(k, v);
+            break;
+
+          case 'string':
+            pt.stringField(k, v);
+            break;
+        }
+      }
+      writer.points.push(pt);
     }
 
     logger.info(`Pushed (${writer.points.length - beforeLength}) point(s)`);
@@ -194,14 +251,14 @@ async function processItem({
 
 module.exports = {
   guard(m) {
-    return !m.subscriptionsError && m.private.stan && m.stanConnected && m.private.influx && m.sourcesTs === m.versionTs && m.subscriptionsTs !== m.versionTs && !m.private.subscriptions;
+    return !m.subscriptionsError && m.private.stan && m.stanConnected && m.private.influx2 && m.sourcesTs === m.versionTs && m.subscriptionsTs !== m.versionTs && !m.private.subscriptions;
   },
 
   execute(m, {
     logger
   }) {
     const {
-      influx,
+      influx2,
       stan
     } = m.private;
     const subs = [];
@@ -227,7 +284,7 @@ module.exports = {
           errorSubject,
           ignoreBeforeDate: ignoreBeforeDate && new Date(ignoreBeforeDate),
           ignoreErrorsAtRedelivery: typeof ignoreErrorsAtRedelivery === 'number' ? ignoreErrorsAtRedelivery : ignoreErrors === true ? 0 : undefined,
-          influx,
+          influx2,
           logger,
           m,
           metricsGroups,

@@ -11,6 +11,7 @@
 module.exports = {
   archive: require('./archive'),
   decodePseudoBinary: require('./decodePseudoBinary'),
+  influx2Write: require('./influx2Write'),
   influxWrite: require('./influxWrite'),
   transform: require('./transform'),
   webhookSend: require('./webhookSend')
